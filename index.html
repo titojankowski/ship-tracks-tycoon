@@ -192,6 +192,7 @@
   button[aria-pressed="true"]{background:var(--go);color:#fff;border-color:#2a5531;border-top-color:#7fb489;border-left-color:#7fb489}
   button.big{flex:1;font-size:14px;padding:10px 12px}
   button.danger[aria-pressed="true"]{background:var(--accent);border-color:#7c2a23;border-top-color:#e08c84;border-left-color:#e08c84}
+  button.elec[aria-pressed="true"]{background:#1d5d8f;color:#fff;border-color:#123c5d;border-top-color:#7db8e8;border-left-color:#7db8e8}
 
   .lever{display:flex;flex-direction:column;gap:6px}
   .lever .opts{display:flex;gap:6px}
@@ -262,11 +263,59 @@
 
   footer.note{padding:6px 16px 10px;font-size:11.5px;color:var(--page-sub)}
   footer.note a{color:inherit}
+
+  /* ——— intro / tutorial overlay ——— */
+  .intro{
+    position:fixed;inset:0;z-index:50;
+    background:rgba(20,26,32,.55);
+    display:grid;place-items:center;padding:16px;
+  }
+  .intro[hidden]{display:none}
+  .intro-card{
+    background:var(--panel);color:var(--panel-ink);
+    border:3px solid var(--panel-lo);
+    border-top-color:var(--panel-hi);border-left-color:var(--panel-hi);
+    border-radius:8px;padding:20px 22px;
+    width:min(440px,94vw);
+    box-shadow:0 8px 0 rgba(0,0,0,.35);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .intro-art{font-size:56px;line-height:1;text-align:center;padding:6px 0}
+  .intro-card h2{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:16px;letter-spacing:.14em;text-transform:uppercase;text-align:center;
+    text-wrap:balance;
+  }
+  .intro-card p{font-size:14.5px;line-height:1.55;max-width:46ch;margin:0 auto}
+  .intro-dots{display:flex;gap:8px;justify-content:center}
+  .intro-dots i{width:10px;height:10px;border-radius:2px;background:var(--meter-bg);border:1px solid var(--panel-lo)}
+  .intro-dots i.on{background:var(--go)}
+  .intro-nav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .intro-nav .fwd{display:flex;gap:8px}
+  #introNext[data-last="1"]{background:var(--go);color:#fff;border-color:#2a5531}
+  .legend a{color:var(--focus)}
+  .legend li{line-height:1.45}
 </style>
 </head>
 <body>
 
 <div class="draft-flag">Draft — First Pass</div>
+
+<div class="intro" id="intro" hidden>
+  <div class="intro-card" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+    <div class="intro-art" id="introArt">🚢</div>
+    <h2 id="introTitle"></h2>
+    <p id="introBody"></p>
+    <div class="intro-dots" id="introDots" aria-hidden="true"></div>
+    <div class="intro-nav">
+      <button id="introSkip">Skip</button>
+      <div class="fwd">
+        <button id="introBack">‹ Back</button>
+        <button id="introNext">Next ›</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <header class="marquee">
   <h1>Ship Tracks Tycoon <span class="flag">— the great inadvertent climate experiment</span></h1>
@@ -294,14 +343,17 @@
         <option value="1" selected>Normal ×1</option>
         <option value="2">Fast ×2</option>
       </select>
+      <button id="helpBtn" aria-label="Show the intro tour">?</button>
     </div>
 
     <div class="lever">
-      <h2>Fuel sulfur rules</h2>
+      <h2>Fleet fuel</h2>
       <div class="opts">
         <button id="eraPre" aria-pressed="true">Pre-2020<br><span class="hint">3.5%&nbsp;S fuel</span></button>
         <button id="eraPost" class="danger" aria-pressed="false">IMO&nbsp;2020<br><span class="hint">0.5%&nbsp;S fuel</span></button>
+        <button id="eraElec" class="elec" aria-pressed="false">Electric<br><span class="hint">no exhaust</span></button>
       </div>
+      <span class="hint" id="eraHint">High-sulfur exhaust seeds bright, cooling clouds — and pollutes the air.</span>
     </div>
 
     <div class="lever">
@@ -354,12 +406,25 @@
         <li>Keyboard: <span class="kbd">Space</span> pause · <span class="kbd">R</span> reset</li>
       </ul>
     </details>
+
+    <details class="legend">
+      <summary>Read the real science</summary>
+      <ul>
+        <li><a href="https://github.com/titojankowski/ship-tracks-tycoon/blob/main/SOURCES.md" target="_blank" rel="noopener">All 14 papers with links</a> — the cited knowledge base behind this sim</li>
+        <li><a href="https://www.carbonbrief.org/analysis-how-low-sulphur-shipping-rules-are-affecting-global-warming" target="_blank" rel="noopener">Carbon Brief explainer</a> — the best starting point</li>
+        <li><a href="https://doi.org/10.1029/2019AV000111" target="_blank" rel="noopener">Diamond 2020</a> — first detection of corridor-scale cloud brightening</li>
+        <li><a href="https://doi.org/10.1038/s43247-024-01442-3" target="_blank" rel="noopener">Yuan 2024</a> — the "inadvertent geoengineering termination shock" paper</li>
+        <li><a href="https://doi.org/10.1038/s43247-024-01911-9" target="_blank" rel="noopener">Zhang 2025</a> — why the forcing is real but hard to detect</li>
+        <li><a href="https://doi.org/10.1126/sciadv.adi8594" target="_blank" rel="noopener">Feingold 2024</a> — the marine cloud brightening research roadmap</li>
+        <li><a href="https://science.nasa.gov/earth/earth-observatory/cloud-changes-in-busy-ship-corridors-146830" target="_blank" rel="noopener">NASA Earth Observatory</a> — ship tracks from space, in plain language</li>
+      </ul>
+    </details>
   </aside>
 </div>
 
 <div class="ticker" aria-label="Research news ticker"><div class="inner" id="tickerInner"></div></div>
 
-<footer class="note">A toy visualization of the ship-track / IMO 2020 science. Numbers in the ticker come from the published literature (Diamond 2020; Yuan 2022/2024; Gettelman 2024; Jordan &amp; Henry 2024; Yoshioka 2024; Zhang 2025; Feingold 2024).</footer>
+<footer class="note">A toy visualization of the ship-track / IMO 2020 science. Numbers in the ticker come from the published literature — every paper is linked in <a href="https://github.com/titojankowski/ship-tracks-tycoon/blob/main/SOURCES.md" target="_blank" rel="noopener">SOURCES.md</a>, and the full cited knowledge base lives in the <a href="https://github.com/titojankowski/ship-tracks-tycoon" target="_blank" rel="noopener">GitHub repo</a>.</footer>
 
 <script>
 "use strict";
@@ -464,6 +529,7 @@ syncFleet();
 /* ---------- simulation step ---------- */
 function emitStrength(sh){
   if (sh.sprayer) return 1.15;                    // sea salt: bright
+  if (state.era==='elec') return 0;               // electric: nothing comes out
   return state.era==='pre' ? 1.0 : 0.16;          // IMO 2020 guts it
 }
 function step(dt){
@@ -482,12 +548,13 @@ function step(dt){
     if (sh.emitAcc > period){
       sh.emitAcc = 0;
       const str = emitStrength(sh);
+      const electricCargo = !sh.sprayer && state.era==='elec';
       const dark = sh.sprayer?0:(state.era==='pre'?0.65:0.12);
-      const nSmoke = (!sh.sprayer && state.era==='pre') ? 2 : 1;   // thick plume vs clean wisp
+      const nSmoke = electricCargo ? 0 : ((!sh.sprayer && state.era==='pre') ? 2 : 1);
       for(let q=0;q<nSmoke;q++)
         state.smoke.push({x:p.x+6+q*3,y:p.y-26-q*5,vy:-rand(26,34),vx:rand(2,9),life:1,dark});
       // seed a cloud-track puff overhead
-      if (Math.random() < (sh.sprayer? 0.95 : (state.era==='pre'?0.9:0.28))){
+      if (str>0 && Math.random() < (sh.sprayer? 0.95 : (state.era==='pre'?0.9:0.28))){
         state.puffs.push({
           x:p.x+rand(-4,4), y:p.y-CLOUD_H+rand(-6,6),
           r:rand(11,17)*(0.7+0.5*str),
@@ -680,9 +747,10 @@ function drawShip(sh){
   poly([[6,-6],[14,-2],[14,6],[6,2]]);
   ctx.fillStyle = sh.sprayer? '#b7d5e4' : '#d0cbba';
   poly([[24,-6],[14,-2],[14,6],[24,2]]);
-  // funnel / spray mast
-  ctx.fillStyle = sh.sprayer ? '#6fa3bd' : '#3a3a3a';
+  // funnel / spray mast (electric cargo ships get a blue power mast)
+  ctx.fillStyle = sh.sprayer ? '#6fa3bd' : (state.era==='elec' ? '#1d5d8f' : '#3a3a3a');
   ctx.fillRect(8,-16,5,9);
+  if(!sh.sprayer && state.era==='elec'){ ctx.fillStyle='#f5c84c'; ctx.fillRect(9,-19,3,3); }
   if(sh.sprayer){ ctx.fillStyle='#eaf6fc'; ctx.fillRect(6,-19,9,3); }
   // containers on cargo ships
   if(!sh.sprayer){
@@ -967,24 +1035,37 @@ $('shipRange').addEventListener('input',e=>{
   $('shipCount').textContent=e.target.value;
   syncFleet();
 });
+const ERA_META = {
+  pre:  { badge:'High-sulfur era · 3.5% S',
+          news:'NEWS: high-sulfur fuel returns — clouds brighten again',
+          hint:'High-sulfur exhaust seeds bright, cooling clouds — and pollutes the air.' },
+  post: { badge:'IMO 2020 era · 0.5% S',
+          news:'NEWS: IMO 2020 in force — fuel sulfur capped at 0.5%!',
+          hint:'Cleaner air, dimmer clouds: the hidden warming emerges.' },
+  elec: { badge:'Electric era · zero exhaust',
+          news:'NEWS: the fleet goes electric — no exhaust at all!',
+          hint:'No exhaust and no new CO2 — but the lost cloud cooling stays lost, and the electricity has to come from somewhere.' }
+};
 function setEra(era){
   if(state.era===era) return;
   state.era=era;
   $('eraPre').setAttribute('aria-pressed', String(era==='pre'));
   $('eraPost').setAttribute('aria-pressed', String(era==='post'));
+  $('eraElec').setAttribute('aria-pressed', String(era==='elec'));
   const badge=$('eraBadge');
-  badge.textContent = era==='post' ? 'IMO 2020 era · 0.5% S' : 'High-sulfur era · 3.5% S';
+  badge.textContent = ERA_META[era].badge;
   badge.classList.toggle('post', era==='post');
-  if(era==='post'){
+  badge.style.background = era==='elec' ? '#1d5d8f' : '';
+  $('eraHint').textContent = ERA_META[era].hint;
+  if(era!=='pre'){
     // theatrical dissolve: existing sulfur tracks starve fast
-    for(const p of state.puffs) p.decay = Math.max(p.decay, 1/4.5);
+    for(const p of state.puffs) if(p.decay<1/4.5) p.decay = 1/4.5;
   }
-  banner(era==='post'
-    ? 'NEWS: IMO 2020 in force — fuel sulfur capped at 0.5%!'
-    : 'NEWS: high-sulfur fuel returns — clouds brighten again');
+  banner(ERA_META[era].news);
 }
 $('eraPre').addEventListener('click',()=>setEra('pre'));
 $('eraPost').addEventListener('click',()=>setEra('post'));
+$('eraElec').addEventListener('click',()=>setEra('elec'));
 $('mcbBtn').addEventListener('click',()=>{
   state.mcb=!state.mcb;
   $('mcbBtn').setAttribute('aria-pressed',String(state.mcb));
@@ -1010,6 +1091,7 @@ function reset(){
   updateHUD();
 }
 addEventListener('keydown',e=>{
+  if(!document.getElementById('intro').hidden) return;         // tour is open
   if(e.target.matches('input,select,button,textarea')) return; // native behavior there
   if(e.key===' '){ e.preventDefault(); setRunning(!state.running); }
   if(e.key==='r'||e.key==='R') reset();
@@ -1026,6 +1108,53 @@ if (reducedMotion){ setRunning(false); banner('Reduced motion detected — press
 for(let w=0;w<260;w++) step(0.1);
 state.reflected=0; state.total=0; state.sst=0; state.simYears=0;
 
+/* ---------- intro tour ---------- */
+const INTRO_STEPS = [
+  { art:'🚢💨', title:'This is a cargo ship',
+    body:'It burns heavy fuel oil, and the sulfur in its exhaust rises toward the low clouds above the ocean. Tens of thousands of ships like this criss-cross the seas.' },
+  { art:'☁️✨', title:'This is a ship track',
+    body:'Sulfur particles seed the cloud with more, smaller droplets — and a cloud with more droplets is brighter. The glowing lines trailing each ship are brightened clouds (the "Twomey effect"). They are real: satellites have photographed them since 1966.' },
+  { art:'☀️🔁', title:'Follow the sunlight',
+    body:'Watch the sparks falling from the sun. Rays that hit a bright track bounce back to space — that cools the planet. Rays that reach the dark water warm it, and the sea color shifts from cool blue toward warm green.' },
+  { art:'🎛️🌊', title:'Now run the experiment',
+    body:'In 2020, a real regulation (IMO 2020) cut ship fuel sulfur by ~86% — and the tracks vanished. Pull the lever and watch the hidden warming emerge. Then try salt-spray boats or an electric fleet. Every number is drawn from published science — see "Read the real science" in the panel.' }
+];
+let introStep=0, introWasRunning=null;
+function introRender(){
+  const s=INTRO_STEPS[introStep];
+  $('introArt').textContent=s.art;
+  $('introTitle').textContent=s.title;
+  $('introBody').textContent=s.body;
+  $('introDots').innerHTML=INTRO_STEPS.map((_,k)=>`<i${k===introStep?' class="on"':''}></i>`).join('');
+  $('introBack').style.visibility = introStep? 'visible':'hidden';
+  const last = introStep===INTRO_STEPS.length-1;
+  $('introNext').textContent = last? '⛴ Start the simulation' : 'Next ›';
+  $('introNext').dataset.last = last? '1':'0';
+}
+function introOpen(){
+  introStep=0; introRender();
+  introWasRunning = state.running;
+  if(state.running) setRunning(false);
+  $('intro').hidden=false;
+  $('introNext').focus();
+}
+function introClose(){
+  $('intro').hidden=true;
+  try{ localStorage.setItem('stt_intro_seen','1'); }catch(e){}
+  if(introWasRunning && !reducedMotion) setRunning(true);
+}
+$('introNext').addEventListener('click',()=>{
+  if(introStep===INTRO_STEPS.length-1) introClose();
+  else { introStep++; introRender(); }
+});
+$('introBack').addEventListener('click',()=>{ if(introStep){ introStep--; introRender(); } });
+$('introSkip').addEventListener('click',introClose);
+$('helpBtn').addEventListener('click',introOpen);
+addEventListener('keydown',e=>{ if(e.key==='Escape' && !$('intro').hidden) introClose(); });
+let introSeen=false;
+try{ introSeen = localStorage.getItem('stt_intro_seen')==='1'; }catch(e){}
+if(!introSeen) introOpen();
+
 /* ---------- news ticker (audit-verified findings) ---------- */
 const FACTS = [
   ['CONOVER, 1966','strange bright cloud lines spotted in early weather-satellite photos — ships below.'],
@@ -1039,7 +1168,8 @@ const FACTS = [
   ['YUAN 2024','high estimate: +0.2 W/m² over the ocean — an "inadvertent geoengineering termination shock."'],
   ['ZHANG 2025','the forcing is real but hard to see: detection rates as low as 12% against natural cloud noise.'],
   ['FEINGOLD 2024','31 scientists: marine cloud brightening needs labs, field trials and models before anyone deploys it.'],
-  ['OPEN QUESTION','how much of record-hot 2023 was the missing ship tracks? Estimates run from ~0.03 °C to half the anomaly.']
+  ['OPEN QUESTION','how much of record-hot 2023 was the missing ship tracks? Estimates run from ~0.03 °C to half the anomaly.'],
+  ['WHAT IF','electric ships would end the exhaust AND the CO2 — but the lost cloud cooling stays lost either way.']
 ];
 $('tickerInner').innerHTML = FACTS.map(f=>`<b>${f[0]}</b>&nbsp; ${f[1]} &nbsp;&nbsp;·&nbsp;&nbsp;`).join('');
 /* pace the ticker at a fixed readable speed regardless of content/viewport width */
