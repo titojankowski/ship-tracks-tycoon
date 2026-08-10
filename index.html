@@ -499,12 +499,13 @@ function isoY(i,j){ return (i+j)*TH/2; }
 /* ---------- entities ---------- */
 /* one speed per lane: ships on a lane never catch each other, so they can't overlap */
 const LANE_SPEED = LANES.map(()=>rand(0.018,0.028));
+const LANE_PHASE = LANES.map(()=>Math.random());   // random start offset per lane, so the fleet scatters
 function makeShip(laneIdx, sprayer=false){
   const lane = LANES[laneIdx];
   const onLane = state.ships.filter(x=>x.lane===lane).length;
   return {
     lane, sprayer,
-    s: (onLane*0.31 + rand(0,0.08)) % 1,   // spaced behind whoever is already on the lane
+    s: (LANE_PHASE[laneIdx] + onLane*0.31 + rand(0,0.05)) % 1,  // scattered, but spaced from lane-mates
     v: LANE_SPEED[laneIdx],
     tint: (rand(-16,16))|0,           // per-ship lightness variation on the era hull color
     emitAcc: 0,
