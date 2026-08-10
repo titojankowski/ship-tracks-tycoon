@@ -554,12 +554,31 @@ function syncFleet(){
   const sprayers = state.ships.filter(s=>s.sprayer);
   const wantSpray = state.mcb ? state.sprayersWanted : 0;
   while(sprayers.length < wantSpray){
-    const sh = makeShip((sprayers.length*2+1)%LANES.length, true);
+    const sh = makeShip(sprayers.length%LANES.length, true);
     sprayers.push(sh); state.ships.push(sh);
   }
   while(sprayers.length > wantSpray){
     const sh = sprayers.pop();
     state.ships.splice(state.ships.indexOf(sh),1);
+  }
+  respaceLanes();
+}
+/* keep every lane's ships evenly spread (same-speed lanes then preserve the gaps) */
+function respaceLanes(){
+  for(const lane of LANES){
+    const onLane = state.ships.filter(x=>x.lane===lane).sort((a,b)=>a.s-b.s);
+    const n = onLane.length;
+    if(n<2) continue;
+    // cyclic min gap
+    let minGap = 1;
+    for(let k=0;k<n;k++){
+      const gap = (onLane[(k+1)%n].s - onLane[k].s + 1) % 1;
+      if(gap<minGap) minGap=gap;
+    }
+    if(minGap < 0.16){
+      const anchor = onLane[0].s;
+      onLane.forEach((sh,k)=>{ sh.s = (anchor + k/n) % 1; });
+    }
   }
 }
 syncFleet();
@@ -583,7 +602,7 @@ function step(dt){
   for(const sh of state.ships){
     sh.s += sh.v*dt;
     sh.bob += dt*2.2;
-    if (sh.s>1.04){ sh.s=-0.04; sh.tint=(rand(-16,16))|0; }
+    if (sh.s>1.02){ sh.s=-0.02; sh.tint=(rand(-16,16))|0; }
     const p = shipPos(sh);
     // funnel smoke (visual only)
     sh.emitAcc += dt;
