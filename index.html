@@ -213,6 +213,10 @@
   button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
   button[aria-pressed="true"]{background:var(--go);color:#fff;border-color:#2a5531;border-top-color:#7fb489;border-left-color:#7fb489}
   button.big{flex:1;font-size:14px;padding:10px 12px}
+  /* operations row: small, quiet, greyscale — the scene is the star */
+  #playBtn,#speedSel,#helpBtn{flex:0 0 auto;font-size:11px;padding:4px 8px;letter-spacing:.02em}
+  #playBtn{min-width:70px}
+  #playBtn[aria-pressed="true"]{background:#a8a294;color:#fff;border-color:#7b7567;border-top-color:#cfc9bb;border-left-color:#cfc9bb}
   button.danger[aria-pressed="true"]{background:var(--accent);border-color:#7c2a23;border-top-color:#e08c84;border-left-color:#e08c84}
   #mcbBtn[aria-pressed="true"]{background:#6a58a8;color:#fff;border-color:#473a75;border-top-color:#ab9cd9;border-left-color:#ab9cd9}
 
