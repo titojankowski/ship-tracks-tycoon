@@ -350,7 +350,7 @@
     <div class="era-badge" id="eraBadge">High-sulfur era · 3.5% S</div>
     <div class="hover-tip" id="hoverTip" hidden><b id="tipName"></b><span id="tipBody"></span></div>
     <div class="time-chip" aria-label="Elapsed simulation time">
-      <span id="timeChip">January, Year 1</span>
+      <span id="timeChip">January, 2010</span>
       <i class="yearbar" id="yearBar"></i>
     </div>
     <div class="paused-veil">Paused</div>
@@ -375,7 +375,7 @@
         <button id="eraPre" aria-pressed="true">Pre-2020<br><span class="hint">3.5%&nbsp;S fuel</span></button>
         <button id="eraPost" class="danger" aria-pressed="false">IMO&nbsp;2020<br><span class="hint">0.5%&nbsp;S fuel</span></button>
       </div>
-      <span class="hint" id="eraHint">High-sulfur exhaust seeds bright, cooling clouds — and pollutes the air.</span>
+      <span class="hint" id="eraHint">High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in January 2020, or pull the lever yourself.</span>
     </div>
 
     <div class="lever">
@@ -470,6 +470,7 @@ const state = {
   running: true,
   speed: 1,
   era: 'pre',            // 'pre' | 'post'
+  autoFlipped: false,    // has history's Jan-2020 auto-flip fired yet
   mcb: false,
   sprayersWanted: 3,
   shipsWanted: 7,
@@ -555,7 +556,12 @@ function emitStrength(sh){
 }
 function step(dt){
   state.t += dt;
-  state.simYears += dt/12;                        // 12 s ≈ 1 sim year
+  state.simYears += dt/12;                        // 12 s ≈ 1 sim year; calendar starts 2010
+  // history happens on schedule: the sulfur cap arrives in January 2020
+  if(!state.autoFlipped && state.simYears>=10){
+    state.autoFlipped = true;
+    if(state.era==='pre') setEra('post');
+  }
 
   // ships
   for(const sh of state.ships){
@@ -951,7 +957,7 @@ function updateHUD(){
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const mTot = Math.floor(state.simYears*12);
-  $('timeChip').textContent = `${MONTHS[mTot%12]}, Year ${Math.floor(mTot/12)+1}`;
+  $('timeChip').textContent = `${MONTHS[mTot%12]}, ${2010+Math.floor(mTot/12)}`;
   $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
   $('photVal').textContent = Math.round(state.reflEMA*100)+'%';
   drawPhotGraph();
@@ -1057,7 +1063,7 @@ $('shipRange').addEventListener('input',e=>{
 const ERA_META = {
   pre:  { badge:'High-sulfur era · 3.5% S',
           news:'NEWS: high-sulfur fuel returns — clouds brighten again',
-          hint:'High-sulfur exhaust seeds bright, cooling clouds — and pollutes the air.' },
+          hint:'High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in January 2020, or pull the lever yourself.' },
   post: { badge:'IMO 2020 era · 0.5% S',
           news:'NEWS: IMO 2020 in force — fuel sulfur capped at 0.5%!',
           hint:'Cleaner air, dimmer clouds: the hidden warming emerges.' }
@@ -1093,13 +1099,16 @@ $('sprayRange').addEventListener('input',e=>{
 });
 $('resetBtn').addEventListener('click',reset);
 function reset(){
+  // restart the historical replay: 2010, high-sulfur world
+  if(state.era!=='pre') setEra('pre');
+  state.autoFlipped=false;
   state.puffs.length=0; state.smoke.length=0; state.photons.length=0; state.ripples.length=0;
   state.flashes.length=0;
   state.photHist.length=0; pgHover=-1;
   state.heat.fill(0);
-  state.reflEMA = state.era==='pre'? 0.55 : 0.2;
-  state.haze = state.era==='pre'? 1 : 0;
-  state.sst=0; state.forcing = state.era==='pre'? -0.14 : -0.02;
+  state.reflEMA = 0.55;
+  state.haze = 1;
+  state.sst=0; state.forcing = -0.14;
   state.reflected=0; state.total=0; state.simYears=0;
   updateHUD();
 }
@@ -1192,7 +1201,7 @@ const INTRO_STEPS = [
   { art:'☀️🔁', title:'Follow the sunlight',
     body:'Watch the sparks falling from the sun. Rays that hit a bright track bounce back to space — that cools the planet. Rays that reach the dark water warm it, and the sea color shifts from cool blue toward warm green.' },
   { art:'🎛️🌊', title:'Now run the experiment',
-    body:'In 2020, a real regulation (IMO 2020) cut ship fuel sulfur by ~86% — and the tracks vanished. Pull the lever and watch the hidden warming emerge. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
+    body:'The clock starts in 2010, when ships still burned high-sulfur fuel. In January 2020 a real regulation (IMO 2020) cuts the sulfur ~86% — watch the tracks vanish and the hidden warming emerge. Too impatient? Pull the lever yourself. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
 ];
 let introStep=0, introWasRunning=null;
 function introRender(){
