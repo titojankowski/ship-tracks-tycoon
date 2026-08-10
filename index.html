@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚢</text></svg>">
+<meta name="description" content="A low-poly toy simulation of ship tracks, the IMO 2020 sulfur regulation, and marine cloud brightening.">
+<title>Ship Tracks Tycoon</title>
+<style>
+  :root{
+    --page-bg:#e9e4d6;
+    --page-ink:#2b2620;
+    --page-sub:#6b6252;
+    --panel:#d8cdb4;
+    --panel-hi:#efe8d6;
+    --panel-lo:#8a7f68;
+    --panel-ink:#33291c;
+    --accent:#c4453a;
+    --go:#3d7a46;
+    --meter-bg:#c3b797;
+    --frame:#4d4437;
+    --tick-bg:#33291c;
+    --tick-ink:#f0e6c8;
+    --focus:#1d5d8f;
+    --graph-line:#2f6f9f;
+    --graph-fill:rgba(77,143,190,.30);
+    --graph-grid:rgba(90,80,60,.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#241f18;
+      --page-ink:#ece4d2;
+      --page-sub:#a89a80;
+      --panel:#3a332a;
+      --panel-hi:#554b3c;
+      --panel-lo:#191510;
+      --panel-ink:#ece4d2;
+      --meter-bg:#241f18;
+      --frame:#191510;
+      --tick-bg:#191510;
+      --tick-ink:#e8dcbb;
+      --focus:#7db8e8;
+      --graph-line:#7db8e8;
+      --graph-fill:rgba(125,184,232,.28);
+      --graph-grid:rgba(220,205,170,.22);
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#241f18;
+    --page-ink:#ece4d2;
+    --page-sub:#a89a80;
+    --panel:#3a332a;
+    --panel-hi:#554b3c;
+    --panel-lo:#191510;
+    --panel-ink:#ece4d2;
+    --meter-bg:#241f18;
+    --frame:#191510;
+    --tick-bg:#191510;
+    --tick-ink:#e8dcbb;
+    --focus:#7db8e8;
+    --graph-line:#7db8e8;
+    --graph-fill:rgba(125,184,232,.28);
+    --graph-grid:rgba(220,205,170,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--page-bg);
+    color:var(--page-ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex;flex-direction:column;
+    min-height:100dvh;
+  }
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  header.marquee{
+    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    padding:12px 16px 8px;
+  }
+  header.marquee h1{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:clamp(17px,2.6vw,24px);
+    letter-spacing:.12em;text-transform:uppercase;
+    text-wrap:balance;
+  }
+  header.marquee h1 .flag{color:var(--accent)}
+  header.marquee p{font-size:13px;color:var(--page-sub);max-width:58ch}
+
+  .cabinet{
+    flex:1;display:grid;gap:10px;
+    grid-template-columns:1fr 300px;
+    grid-template-rows:1fr;
+    padding:0 12px 8px;
+    min-height:0;
+  }
+  @media (max-width:900px){
+    .cabinet{grid-template-columns:1fr;grid-template-rows:minmax(300px,58dvh) auto}
+  }
+
+  .viewport{
+    position:relative;min-height:280px;min-width:0;
+    border:4px solid var(--frame);
+    border-radius:6px;
+    background:#8fc4dd; /* fixed game-sky — same in both themes */
+    overflow:hidden;
+  }
+  canvas{display:block;width:100%;height:100%}
+  .paused-veil{
+    position:absolute;inset:0;display:none;place-items:center;
+    background:rgba(20,30,40,.28);
+    color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6);
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:clamp(18px,3vw,28px);letter-spacing:.25em;text-transform:uppercase;
+    pointer-events:none;
+  }
+  .viewport.is-paused .paused-veil{display:grid}
+  .event-banner{
+    position:absolute;left:50%;top:14%;transform:translateX(-50%) scale(.9);
+    background:var(--accent);color:#fff;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:clamp(12px,1.8vw,16px);letter-spacing:.14em;text-transform:uppercase;
+    padding:8px 14px;border:3px solid #fff;border-radius:4px;
+    box-shadow:0 4px 0 rgba(0,0,0,.35);
+    opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;
+    max-width:90%;text-align:center;
+  }
+  .event-banner.show{opacity:1;transform:translateX(-50%) scale(1)}
+  .era-badge{
+    position:absolute;right:10px;top:10px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:#fff;background:#5a6c78;border:2px solid #fff;
+    border-radius:4px;padding:5px 9px;
+    box-shadow:0 3px 0 rgba(0,0,0,.3);
+    pointer-events:none;transition:background .5s;
+  }
+  .era-badge.post{background:var(--accent)}
+  .time-chip{
+    position:absolute;right:12px;bottom:12px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+    font-size:clamp(16px,3vw,30px);letter-spacing:.08em;text-transform:uppercase;
+    max-width:calc(100% - 24px);white-space:nowrap;
+    line-height:1;
+    color:#fff;background:rgba(26,38,48,.78);
+    border:3px solid #fff;border-radius:6px;padding:10px 16px 14px;
+    box-shadow:0 4px 0 rgba(0,0,0,.3);
+    pointer-events:none;overflow:hidden;
+  }
+  .time-chip .yearbar{
+    position:absolute;left:0;bottom:0;height:6px;width:0;
+    background:#f5c84c;transition:width .3s linear;
+  }
+
+  /* ——— RCT-style control panel ——— */
+  .panel{
+    display:flex;flex-direction:column;gap:10px;
+    background:var(--panel);color:var(--panel-ink);
+    border:3px solid var(--panel-lo);
+    border-top-color:var(--panel-hi);border-left-color:var(--panel-hi);
+    border-radius:6px;padding:12px;
+    min-width:0;
+    align-self:start;
+    max-height:100%;overflow-y:auto;
+  }
+  @media (max-width:900px){ .panel{align-self:stretch;max-height:none} }
+  .panel h2{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--panel-ink);opacity:.75;
+    border-bottom:2px solid var(--panel-lo);padding-bottom:4px;
+  }
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+  button,select{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:13px;letter-spacing:.05em;
+    background:var(--panel-hi);color:var(--panel-ink);
+    border:2px solid var(--panel-lo);
+    border-top-color:#fff8;border-left-color:#fff8;
+    border-radius:4px;padding:7px 12px;cursor:pointer;
+  }
+  button:active{border-top-color:var(--panel-lo);border-left-color:var(--panel-lo);border-bottom-color:#fff8;border-right-color:#fff8;transform:translateY(1px)}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  button[aria-pressed="true"]{background:var(--go);color:#fff;border-color:#2a5531;border-top-color:#7fb489;border-left-color:#7fb489}
+  button.big{flex:1;font-size:14px;padding:10px 12px}
+  button.danger[aria-pressed="true"]{background:var(--accent);border-color:#7c2a23;border-top-color:#e08c84;border-left-color:#e08c84}
+
+  .lever{display:flex;flex-direction:column;gap:6px}
+  .lever .opts{display:flex;gap:6px}
+  .lever .opts button{flex:1}
+  label.small,.hint{font-size:12px;color:var(--panel-ink);opacity:.8}
+  input[type=range]{width:100%;accent-color:var(--go)}
+  #sprayRange{accent-color:var(--graph-line)}   /* sea-salt blue, distinct from the fleet slider */
+
+  .meters{display:flex;flex-direction:column;gap:8px}
+  .meter{display:flex;flex-direction:column;gap:3px}
+  .meter .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .meter .name{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.75;
+    font-family:ui-monospace,Menlo,Consolas,monospace}
+  .meter .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;font-size:15px}
+  .meter .val.cool{color:#1d5d8f}
+  :root[data-theme="dark"] .meter .val.cool,
+  html:not([data-theme]) .meter .val.cool{color:inherit}
+  .bar{height:12px;background:var(--meter-bg);border:2px solid var(--panel-lo);border-radius:3px;position:relative;overflow:hidden}
+  .bar i{position:absolute;top:0;bottom:0;left:50%;background:#4d8fbe}
+  .bar i.warm{background:var(--accent)}
+  .bar .zero{position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:var(--panel-lo)}
+  .sea-scale{
+    height:14px;border:2px solid var(--panel-lo);border-radius:3px;position:relative;
+    background:linear-gradient(90deg,
+      hsl(213 45% 33%) 0%, hsl(207 40% 40%) 16%,
+      hsl(183 46% 44%) 44%, hsl(150 45% 46%) 72%, hsl(75 50% 50%) 100%);
+  }
+  #sstVal{font-size:20px;font-weight:700;transition:color .5s}
+  #sstWord{margin-top:-4px;transition:color .5s;font-weight:600}
+  .sea-scale .zmark{
+    position:absolute;top:-4px;bottom:-4px;width:2px;
+    left:calc(16.7% - 1px);
+    background:var(--panel-ink);opacity:.75;
+  }
+  .sea-scale i{
+    position:absolute;top:-3px;bottom:-3px;width:3px;background:#fff;
+    outline:1px solid #333;left:0;transition:left .4s;
+  }
+  .scale-caps{margin-top:-2px}
+  #photGraph{
+    display:block;width:100%;height:64px;
+    background:var(--meter-bg);
+    border:2px solid var(--panel-lo);border-radius:3px;
+    cursor:crosshair;touch-action:none;
+  }
+
+  details.legend{font-size:12.5px;line-height:1.45}
+  details.legend summary{cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.8;padding:2px 0}
+  details.legend ul{list-style:none;display:flex;flex-direction:column;gap:5px;margin-top:6px}
+  details.legend b{font-weight:600}
+  .kbd{border:1px solid var(--panel-lo);border-radius:3px;padding:0 4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+
+  /* ——— news ticker ——— */
+  .ticker{
+    background:var(--tick-bg);color:var(--tick-ink);
+    border-top:3px solid var(--panel-lo);
+    overflow:hidden;white-space:nowrap;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:12.5px;letter-spacing:.03em;
+    padding:7px 0;
+  }
+  .ticker .inner{display:inline-block;padding-left:100%;animation:tick 140s linear infinite}
+  .ticker .inner b{color:#f5c84c}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+  body.paused .ticker .inner{animation-play-state:paused}
+  @media (prefers-reduced-motion:reduce){ .ticker .inner{animation:none;padding-left:12px} }
+
+  footer.note{padding:6px 16px 10px;font-size:11.5px;color:var(--page-sub)}
+  footer.note a{color:inherit}
+</style>
+</head>
+<body>
+
+<header class="marquee">
+  <h1>Ship Tracks Tycoon <span class="flag">— the great inadvertent climate experiment</span></h1>
+  <p>Cargo ships brighten the clouds above them; bright clouds bounce sunlight back to space. Pull the IMO&nbsp;2020 lever and watch the cooling disappear.</p>
+</header>
+
+<div class="cabinet">
+  <div class="viewport" id="viewport">
+    <canvas id="sea" aria-label="Isometric animated simulation of ships forming bright cloud tracks over the ocean"></canvas>
+    <div class="era-badge" id="eraBadge">High-sulfur era · 3.5% S</div>
+    <div class="time-chip" aria-label="Elapsed simulation time">
+      <span id="timeChip">January, Year 1</span>
+      <i class="yearbar" id="yearBar"></i>
+    </div>
+    <div class="paused-veil">Paused</div>
+    <div class="event-banner" id="banner"></div>
+  </div>
+
+  <aside class="panel" aria-label="Simulation controls">
+    <h2>Operations</h2>
+    <div class="btn-row">
+      <button id="playBtn" class="big" aria-pressed="true">❚❚ Pause</button>
+      <select id="speedSel" aria-label="Simulation speed">
+        <option value="0.5">Slow ×0.5</option>
+        <option value="1" selected>Normal ×1</option>
+        <option value="2">Fast ×2</option>
+      </select>
+    </div>
+
+    <div class="lever">
+      <h2>Fuel sulfur rules</h2>
+      <div class="opts">
+        <button id="eraPre" aria-pressed="true">Pre-2020<br><span class="hint">3.5%&nbsp;S fuel</span></button>
+        <button id="eraPost" class="danger" aria-pressed="false">IMO&nbsp;2020<br><span class="hint">0.5%&nbsp;S fuel</span></button>
+      </div>
+    </div>
+
+    <div class="lever">
+      <h2>Fleet</h2>
+      <label class="small" for="shipRange">Ships on the water: <span id="shipCount" class="mono">7</span></label>
+      <input type="range" id="shipRange" min="2" max="12" value="7" step="1">
+      <button id="mcbBtn" aria-pressed="false">☁ Deploy cloud-brightening sprayers</button>
+      <div id="mcbRow" hidden>
+        <label class="small" for="sprayRange">Sprayer boats: <span id="sprayCount" class="mono">3</span></label>
+        <input type="range" id="sprayRange" min="1" max="10" value="3" step="1">
+      </div>
+      <span class="hint">Sea-salt spray boats — the deliberate version of what sulfur did by accident.</span>
+    </div>
+
+    <div class="meters">
+      <h2>Readouts <span class="hint">(sim estimates)</span></h2>
+      <div class="meter">
+        <div class="row"><span class="name">Shipping cloud effect</span><span class="val" id="forceVal">−0.14 W/m²</span></div>
+        <div class="bar" aria-hidden="true"><i id="forceBar"></i><span class="zero"></span></div>
+      </div>
+      <div class="meter">
+        <div class="row"><span class="name">Ocean temp</span><span class="val" id="sstVal">● 0.00 °C</span></div>
+        <div class="row"><span class="hint" id="sstWord">at the 2019 baseline</span></div>
+        <div class="sea-scale" aria-hidden="true"><b class="zmark"></b><i id="sstMark"></i></div>
+        <div class="row scale-caps"><span class="hint">−0.05°</span><span class="hint">notch = 2019 · sea color matches</span><span class="hint">+0.25°</span></div>
+      </div>
+      <div class="meter">
+        <div class="row"><span class="name">Visible ship tracks</span><span class="val" id="trackVal">0</span></div>
+      </div>
+      <div class="meter">
+        <div class="row"><span class="name">Sunlight reflected</span><span class="val" id="photVal">—</span></div>
+        <canvas id="photGraph" aria-label="Rolling share of incoming sunlight reflected back to space, most recent minute"></canvas>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="resetBtn">↺ Reset</button>
+    </div>
+
+    <details class="legend">
+      <summary>What am I looking at?</summary>
+      <ul>
+        <li><b>Ships</b> burn fuel; sulfur in the exhaust seeds clouds with extra droplets.</li>
+        <li><b>Bright cloud lines</b> are ship tracks — more, smaller droplets reflect more sun (the Twomey effect).</li>
+        <li><b>Sun sparks</b> bounce off bright tracks (cooling ✓) or reach the dark ocean (warming).</li>
+        <li><b>Sea color = temperature</b>: indigo is cooler than 2019, deep blue is the baseline, and warming walks it through teal and green toward hot yellow-green. A big sprayer fleet can cool it below baseline.</li>
+        <li><b>IMO 2020 lever</b>: the real-world rule cut fuel sulfur 3.5%→0.5%. Tracks collapsed; hidden warming emerged.</li>
+        <li><b>Sprayer boats</b> are marine cloud brightening — proposed deliberate track-making with sea salt.</li>
+        <li>Meters are toy-scaled to real published magnitudes, not a climate model.</li>
+        <li>Keyboard: <span class="kbd">Space</span> pause · <span class="kbd">R</span> reset</li>
+      </ul>
+    </details>
+  </aside>
+</div>
+
+<div class="ticker" aria-label="Research news ticker"><div class="inner" id="tickerInner"></div></div>
+
+<footer class="note">A toy visualization of the ship-track / IMO 2020 science. Numbers in the ticker come from the published literature (Diamond 2020; Yuan 2022/2024; Gettelman 2024; Jordan &amp; Henry 2024; Yoshioka 2024; Zhang 2025; Feingold 2024).</footer>
+
+<script>
+"use strict";
+/* ============ Ship Tracks Tycoon — isometric toy sim ============ */
+
+const cvs = document.getElementById('sea');
+const ctx = cvs.getContext('2d');
+const viewport = document.getElementById('viewport');
+
+/* ---------- world config ---------- */
+const N = 16;                 // iso grid is N x N tiles
+const TW = 64, TH = 32;       // tile diamond size (world px)
+const CLOUD_H = 108;          // cloud deck height above sea (world px)
+const WORLD_W = N * TW;
+const WORLD_H = 575;          // content spans roughly y −50 … 512
+
+/* lanes: constant (i+j)=k -> horizontal lines on screen */
+const LANES = [7, 10, 13, 16, 19, 22];
+
+const state = {
+  running: true,
+  speed: 1,
+  era: 'pre',            // 'pre' | 'post'
+  mcb: false,
+  sprayersWanted: 3,
+  shipsWanted: 7,
+  t: 0,                  // sim seconds
+  simYears: 0,           // integrates while running
+  sst: 0,                // °C vs 2019
+  forcing: -0.14,        // displayed W/m² (smoothed)
+  reflected: 0, total: 0,
+  reflEMA: 0.55,         // smoothed share of photons reflected
+  photHist: [],          // rolling samples of reflEMA for the graph
+  haze: 1,               // 1 = polluted pre-2020 air, 0 = clean post air (eased)
+  heat: new Float32Array(N*N),   // local sea-surface heating where sunlight lands
+  ships: [], puffs: [], clouds: [], photons: [], ripples: [], smoke: [], flashes: []
+};
+
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (reducedMotion) state.running = false;
+
+/* ---------- helpers ---------- */
+const rand = (a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function isoX(i,j){ return (i-j)*TW/2 + WORLD_W/2; }
+function isoY(i,j){ return (i+j)*TH/2; }
+
+/* ---------- entities ---------- */
+const HULLS = ['#b23a34','#3a5f8a','#4f7a45','#7a5a3a','#5b4a78'];
+function makeShip(lane, sprayer=false){
+  return {
+    lane, sprayer,
+    s: Math.random(),                 // 0..1 along lane
+    v: rand(0.018, 0.028),            // lane fraction / sec
+    hull: HULLS[(Math.random()*HULLS.length)|0],
+    emitAcc: 0,
+    bob: Math.random()*6.28
+  };
+}
+function shipPos(sh){
+  const k = sh.lane;
+  const iMin = Math.max(0, k-(N-1)), iMax = Math.min(N-1, k);
+  const i = iMin + (iMax-iMin)*sh.s;
+  const j = k - i;
+  return { x: isoX(i,j), y: isoY(i,j) };
+}
+function makeCloud(x){
+  const y = rand(-24, 220);
+  const n = 3+(Math.random()*3|0);
+  const blobs=[];
+  for(let b=0;b<n;b++) blobs.push({dx:rand(-34,34),dy:rand(-8,8),r:rand(14,26)});
+  return {x: x!==undefined?x:rand(-60,WORLD_W+60), y, v:rand(3,7), blobs};
+}
+for(let c=0;c<9;c++) state.clouds.push(makeCloud());
+
+/* ---------- fleet management ---------- */
+function syncFleet(){
+  const want = state.shipsWanted;
+  const cargo = state.ships.filter(s=>!s.sprayer);
+  while(cargo.length < want){
+    const sh = makeShip(LANES[(Math.random()*LANES.length)|0]);
+    cargo.push(sh); state.ships.push(sh);
+  }
+  while(cargo.length > want){
+    const sh = cargo.pop();
+    state.ships.splice(state.ships.indexOf(sh),1);
+  }
+  const sprayers = state.ships.filter(s=>s.sprayer);
+  const wantSpray = state.mcb ? state.sprayersWanted : 0;
+  while(sprayers.length < wantSpray){
+    const sh = makeShip(LANES[(sprayers.length*2+1)%LANES.length], true);
+    sh.hull = '#e8e8e0';
+    sprayers.push(sh); state.ships.push(sh);
+  }
+  while(sprayers.length > wantSpray){
+    const sh = sprayers.pop();
+    state.ships.splice(state.ships.indexOf(sh),1);
+  }
+}
+syncFleet();
+
+/* ---------- simulation step ---------- */
+function emitStrength(sh){
+  if (sh.sprayer) return 1.15;                    // sea salt: bright
+  return state.era==='pre' ? 1.0 : 0.16;          // IMO 2020 guts it
+}
+function step(dt){
+  state.t += dt;
+  state.simYears += dt/12;                        // 12 s ≈ 1 sim year
+
+  // ships
+  for(const sh of state.ships){
+    sh.s += sh.v*dt;
+    sh.bob += dt*2.2;
+    if (sh.s>1.04){ sh.s=-0.04; if(!sh.sprayer) sh.hull=HULLS[(Math.random()*HULLS.length)|0]; }
+    const p = shipPos(sh);
+    // funnel smoke (visual only)
+    sh.emitAcc += dt;
+    const period = 0.30;
+    if (sh.emitAcc > period){
+      sh.emitAcc = 0;
+      const str = emitStrength(sh);
+      const dark = sh.sprayer?0:(state.era==='pre'?0.65:0.12);
+      const nSmoke = (!sh.sprayer && state.era==='pre') ? 2 : 1;   // thick plume vs clean wisp
+      for(let q=0;q<nSmoke;q++)
+        state.smoke.push({x:p.x+6+q*3,y:p.y-26-q*5,vy:-rand(26,34),vx:rand(2,9),life:1,dark});
+      // seed a cloud-track puff overhead
+      if (Math.random() < (sh.sprayer? 0.95 : (state.era==='pre'?0.9:0.28))){
+        state.puffs.push({
+          x:p.x+rand(-4,4), y:p.y-CLOUD_H+rand(-6,6),
+          r:rand(11,17)*(0.7+0.5*str),
+          bright: str*(sh.sprayer?1:rand(0.85,1)),
+          life:1, decay: 1/( sh.sprayer?26: (state.era==='pre'? 22 : 9) ),
+          vx: 4
+        });
+      }
+    }
+  }
+
+  // track puffs age & drift
+  for(let i=state.puffs.length-1;i>=0;i--){
+    const p=state.puffs[i];
+    p.life -= p.decay*dt; p.x += p.vx*dt;
+    if(p.life<=0 || p.x>WORLD_W+80) state.puffs.splice(i,1);
+  }
+  if(state.puffs.length>700) state.puffs.splice(0,state.puffs.length-700);
+
+  // ambient clouds drift
+  for(const c of state.clouds){ c.x += c.v*dt; if(c.x>WORLD_W+90) { Object.assign(c, makeCloud(-80)); } }
+
+  // smoke
+  for(let i=state.smoke.length-1;i>=0;i--){
+    const s=state.smoke[i]; s.x+=s.vx*dt; s.y+=s.vy*dt; s.vy*=(1-0.6*dt); s.life-=dt*0.55;
+    if(s.life<=0) state.smoke.splice(i,1);
+  }
+
+  // photons from the sun
+  if(!step.photAcc) step.photAcc=0;
+  step.photAcc += dt;
+  if(step.photAcc > 0.55){
+    step.photAcc = 0;
+    const tx = rand(WORLD_W*0.12, WORLD_W*0.9);
+    const ty = rand(20, 300);   // aim anywhere in the cloud-deck band
+    state.photons.push({x:WORLD_W*0.07,y:-14, tx, ty, phase:'down1', sp: 260});
+  }
+  for(let i=state.photons.length-1;i>=0;i--){
+    const ph=state.photons[i];
+    const dx=ph.tx-ph.x, dy=ph.ty-ph.y, d=Math.hypot(dx,dy);
+    const mv=ph.sp*dt;
+    if(d<=mv){
+      ph.x=ph.tx; ph.y=ph.ty;
+      if(ph.phase==='down1'){
+        // sample track-puff brightness near the photon (puffs render at p.y+38)
+        let hit=0;
+        for(const p of state.puffs){
+          if(Math.abs(p.x-ph.x)<28 && Math.abs(p.y+38-ph.y)<34 && p.life>0.15){
+            hit=Math.max(hit,p.bright*Math.min(1,p.life*1.6));
+          }
+        }
+        const baseCloud=0.18;
+        const reflectP = clamp(baseCloud + hit*0.75, 0, 0.95);
+        state.total++;
+        const bounced = Math.random()<reflectP;
+        state.reflEMA += ((bounced?1:0) - state.reflEMA)*0.05;
+        if(bounced){
+          state.reflected++;
+          state.flashes.push({x:ph.x,y:ph.y,life:1});
+          ph.phase='up'; ph.tx=ph.x+rand(60,140); ph.ty=-40;
+        } else {
+          ph.phase='down2';
+          // continue to the sea surface below this point
+          ph.tx=ph.x+rand(-8,8); ph.ty=rand(Math.max(60,ph.y+50), N*TH-16);
+        }
+      } else if(ph.phase==='down2'){
+        state.ripples.push({x:ph.x,y:ph.ty,r:2,life:1});
+        // deposit heat into the sea tiles under the strike
+        const ti=Math.floor(ph.ty/TH + (ph.x-WORLD_W/2)/TW);
+        const tj=Math.floor(ph.ty/TH - (ph.x-WORLD_W/2)/TW);
+        for(let oi=-1;oi<=1;oi++) for(let oj=-1;oj<=1;oj++){
+          const ii=ti+oi, jj=tj+oj;
+          if(ii>=0&&ii<N&&jj>=0&&jj<N){
+            const add=(oi===0&&oj===0)?0.45:0.16;
+            state.heat[ii*N+jj]=Math.min(1.2, state.heat[ii*N+jj]+add);
+          }
+        }
+        state.photons.splice(i,1); continue;
+      } else { // up
+        state.photons.splice(i,1); continue;
+      }
+    } else {
+      ph.x += dx/d*mv; ph.y += dy/d*mv;
+    }
+  }
+  for(let i=state.ripples.length-1;i>=0;i--){
+    const r=state.ripples[i]; r.r+=26*dt; r.life-=dt*1.4;
+    if(r.life<=0) state.ripples.splice(i,1);
+  }
+  for(let i=state.flashes.length-1;i>=0;i--){
+    const f=state.flashes[i]; f.life-=dt*1.8;
+    if(f.life<=0) state.flashes.splice(i,1);
+  }
+  // atmospheric haze eases toward the era's air quality
+  const hazeTarget = state.era==='pre' ? 1 : 0;
+  state.haze += (hazeTarget-state.haze)*Math.min(1, dt*0.5);
+
+  // local sea heat cools off over ~8 s
+  const hDecay = 1 - Math.min(1, dt*0.13);
+  for(let h=0;h<state.heat.length;h++) state.heat[h]*=hDecay;
+
+  // sample the reflected-share series for the graph (~1 sample / 0.6 sim-s)
+  if(!step.sampAcc) step.sampAcc=0;
+  step.sampAcc += dt;
+  if(step.sampAcc > 0.6){
+    step.sampAcc = 0;
+    state.photHist.push(state.reflEMA);
+    if(state.photHist.length>110) state.photHist.shift();
+  }
+
+  // ---- physics-flavoured bookkeeping (toy-scaled to published magnitudes) ----
+  // track density 0..1 given default fleet in pre-2020 era ≈ 1
+  let dens=0;
+  for(const p of state.puffs) dens += p.bright*Math.min(1,p.life*1.5);
+  dens = clamp(dens/252, 0, 1.6);    // ≈1 with the default 7-ship pre-2020 fleet; MCB fleets can exceed it
+  // shipping cloud effect: -0.14 W/m² at dens=1 (≈ model-consensus unmasking magnitude)
+  const targetF = -0.14 * dens;
+  state.forcing += (targetF - state.forcing) * Math.min(1, dt*0.8);
+  // SST integrates the gap vs the pre-2020 baseline (-0.14); decades compressed so the change is visible
+  const dF = state.forcing - (-0.14);
+  state.sst += dF * 0.16 * (dt/12);
+  state.sst = clamp(state.sst, -0.08, 0.40);
+}
+
+/* ---------- drawing ---------- */
+/* temperature color stops: indigo (below baseline) → deep blue → teal → green → hot yellow-green */
+const SEA_STOPS = [
+  [-0.2, 213, 45, 33],
+  [ 0.0, 207, 40, 40],
+  [ 0.33,183, 46, 44],
+  [ 0.66,150, 45, 46],
+  [ 1.0,  75, 50, 50],
+];
+function seaHSL(w){
+  if(w<=SEA_STOPS[0][0]) return SEA_STOPS[0];
+  for(let k=1;k<SEA_STOPS.length;k++){
+    const [w1,h1,s1,l1]=SEA_STOPS[k-1], [w2,h2,s2,l2]=SEA_STOPS[k];
+    if(w<=w2){
+      const f=(w-w1)/(w2-w1);
+      return [w, h1+(h2-h1)*f, s1+(s2-s1)*f, l1+(l2-l1)*f];
+    }
+  }
+  return SEA_STOPS[SEA_STOPS.length-1];
+}
+function seaTileColor(i,j,t){
+  const wave = Math.sin(t*1.4 + (i+j)*0.7) * 0.5 + Math.sin(t*0.9 + (i-j)*0.9)*0.5;
+  const clean = 1-state.haze;
+  // temperature IS the color: global SST (full scale at +0.25°) + local heating where sun lands
+  const w = clamp( state.sst/0.25 + state.heat[i*N+j]*0.5, -0.2, 1 );
+  const [,h,s,l]=seaHSL(w);
+  return `hsl(${(h-clean*6).toFixed(1)} ${(s+clean*6).toFixed(1)}% ${(l + wave*4 + ((i+j)%2?-2:2) + clean*3).toFixed(1)}%)`;
+}
+function drawSea(t){
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    const x=isoX(i,j), y=isoY(i,j);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+TW/2, y+TH/2);
+    ctx.lineTo(x, y+TH);
+    ctx.lineTo(x-TW/2, y+TH/2);
+    ctx.closePath();
+    ctx.fillStyle = seaTileColor(i,j,t);
+    ctx.fill();
+  }
+}
+function drawShip(sh){
+  const {x,y} = shipPos(sh);
+  const bob = Math.sin(sh.bob)*1.6;
+  const Y = y + bob;
+  ctx.save();
+  ctx.translate(x, Y);
+  // shadow
+  ctx.fillStyle='rgba(10,30,40,.25)';
+  ctx.beginPath(); ctx.ellipse(0, 10, 26, 7, 0, 0, 6.29); ctx.fill();
+  // hull: iso box
+  const w=48,h=12,d=14;
+  // deck top
+  ctx.fillStyle = shade(sh.hull, 18);
+  poly([[-w/2,0],[0,-d/2],[w/2,0],[0,d/2]]);
+  // left face
+  ctx.fillStyle = shade(sh.hull, -14);
+  poly([[-w/2,0],[0,d/2],[0,d/2+h],[-w/2,h]]);
+  // right face
+  ctx.fillStyle = sh.hull;
+  poly([[w/2,0],[0,d/2],[0,d/2+h],[w/2,h]]);
+  // superstructure
+  ctx.fillStyle = sh.sprayer? '#cfe4ee' : '#e6e2d4';
+  poly([[6,-6],[16,-10],[24,-6],[14,-2]]);
+  ctx.fillStyle = sh.sprayer? '#9fc3d6' : '#b9b4a2';
+  poly([[6,-6],[14,-2],[14,6],[6,2]]);
+  ctx.fillStyle = sh.sprayer? '#b7d5e4' : '#d0cbba';
+  poly([[24,-6],[14,-2],[14,6],[24,2]]);
+  // funnel / spray mast
+  ctx.fillStyle = sh.sprayer ? '#6fa3bd' : '#3a3a3a';
+  ctx.fillRect(8,-16,5,9);
+  if(sh.sprayer){ ctx.fillStyle='#eaf6fc'; ctx.fillRect(6,-19,9,3); }
+  // containers on cargo ships
+  if(!sh.sprayer){
+    const cols=['#c96f3a','#5c86b5','#7a9a56'];
+    for(let c=0;c<3;c++){
+      ctx.fillStyle=cols[c];
+      poly([[-w/2+8+c*11,-3],[-w/2+14+c*11,-6],[-w/2+20+c*11,-3],[-w/2+14+c*11,0]]);
+    }
+  }
+  ctx.restore();
+}
+function poly(pts){ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) ctx.lineTo(pts[k][0],pts[k][1]); ctx.closePath(); ctx.fill(); }
+function shade(hex, amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, g=((n>>8)&255)+amt, b=(n&255)+amt;
+  return `rgb(${clamp(r,0,255)} ${clamp(g,0,255)} ${clamp(b,0,255)})`;
+}
+function drawCloudBlob(cx,cy,r,fill){
+  // low-poly cloud: hexagon-ish
+  ctx.fillStyle=fill;
+  ctx.beginPath();
+  for(let a=0;a<7;a++){
+    const ang=a/7*6.283, rr=r*(0.82+0.22*((a*7919)%10)/10);
+    const px=cx+Math.cos(ang)*rr, py=cy+Math.sin(ang)*rr*0.55;
+    a? ctx.lineTo(px,py) : ctx.moveTo(px,py);
+  }
+  ctx.closePath(); ctx.fill();
+}
+function drawClouds(){
+  // ambient clouds: kept dim and grey so ship tracks pop against them
+  for(const c of state.clouds){
+    for(const b of c.blobs) drawCloudBlob(c.x+b.dx, 30+c.y+b.dy, b.r, 'rgba(206,215,222,0.5)');
+  }
+  // ship-track puffs: two-layer glow — soft halo + bright blue-white core
+  for(const p of state.puffs){
+    const a = clamp(p.life,0,1);
+    const strength = clamp(p.bright,0,1.2);
+    drawCloudBlob(p.x, p.y+38, p.r*1.25,
+      `rgba(238,246,255,${(0.12+0.35*a*strength).toFixed(3)})`);
+    const lum = Math.round(228 + strength*27);
+    drawCloudBlob(p.x, p.y+38, p.r*0.62,
+      `rgb(${lum} ${Math.min(255,lum+4)} 255 / ${((0.18+0.72*a)*clamp(strength+0.1,0,1)).toFixed(3)})`);
+  }
+  // reflection flashes: a spark where sunlight bounced off a track
+  for(const f of state.flashes){
+    ctx.fillStyle=`rgba(255,255,235,${(f.life*0.9).toFixed(3)})`;
+    const r=6+(1-f.life)*14;
+    ctx.save(); ctx.translate(f.x,f.y);
+    poly([[0,-r],[r*0.35,0],[0,r],[-r*0.35,0]]);
+    poly([[-r,0],[0,-r*0.35],[r,0],[0,r*0.35]]);
+    ctx.restore();
+  }
+}
+function drawSun(){
+  ctx.save();
+  ctx.translate(WORLD_W*0.07, -14);
+  // rotating chunky spokes
+  const spin = state.t*0.15;
+  ctx.fillStyle='rgba(245,200,76,0.55)';
+  for(let a=0;a<8;a++){
+    const ang = spin + a*Math.PI/4;
+    const c=Math.cos(ang), s=Math.sin(ang);
+    const r0=34, r1=58, hw=6;
+    poly([[c*r0 - s*hw, s*r0 + c*hw],
+          [c*r1, s*r1],
+          [c*r0 + s*hw, s*r0 - c*hw]]);
+  }
+  // glow halo + big diamond body
+  ctx.fillStyle='rgba(249,221,139,0.35)';
+  poly([[0,-40],[36,0],[0,40],[-36,0]]);
+  ctx.fillStyle='#f5c84c';
+  poly([[0,-30],[27,0],[0,30],[-27,0]]);
+  ctx.fillStyle='#f9dd8b';
+  poly([[0,-17],[15,0],[0,17],[-15,0]]);
+  ctx.restore();
+}
+function drawPhotons(){
+  for(const ph of state.photons){
+    // long comet trail pointing back along the direction of travel
+    const dx=ph.tx-ph.x, dy=ph.ty-ph.y, d=Math.hypot(dx,dy)||1;
+    const ux=dx/d, uy=dy/d, L=54;
+    const bx=ph.x-ux*L, by=ph.y-uy*L;
+    const head = ph.phase==='up' ? '255,246,205' : '250,205,90';
+    const grad=ctx.createLinearGradient(bx,by,ph.x,ph.y);
+    grad.addColorStop(0,`rgba(${head},0)`);
+    grad.addColorStop(1,`rgba(${head},0.9)`);
+    ctx.strokeStyle=grad; ctx.lineWidth=4.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(ph.x,ph.y); ctx.stroke();
+    // bright head
+    ctx.fillStyle = ph.phase==='up' ? '#fff6cd' : '#f5c84c';
+    ctx.save(); ctx.translate(ph.x,ph.y);
+    poly([[0,-7],[6,0],[0,7],[-6,0]]);
+    ctx.fillStyle='#fff';
+    poly([[0,-3],[2.5,0],[0,3],[-2.5,0]]);
+    ctx.restore();
+  }
+  for(const r of state.ripples){
+    ctx.strokeStyle=`rgba(255,214,120,${r.life*0.8})`;
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(r.x,r.y,r.r,r.r*0.45,0,0,6.29); ctx.stroke();
+  }
+}
+function drawSmoke(){
+  for(const s of state.smoke){
+    const dirty = s.dark>0.4;
+    const g = dirty? 74 : 228;
+    const size = dirty? 7+(1-s.life)*14 : 4+(1-s.life)*7;
+    const alpha = dirty? s.life*0.62 : s.life*0.3;
+    drawCloudBlob(s.x, s.y, size, `rgba(${g},${g},${g+8},${alpha.toFixed(3)})`);
+  }
+}
+
+let viewScale=1, viewOX=0, viewOY=0;
+function layout(){
+  const r = viewport.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  cvs.width = Math.round(r.width*dpr); cvs.height=Math.round(r.height*dpr);
+  const s = Math.min(r.width/WORLD_W, r.height/WORLD_H);
+  viewScale = s*dpr;
+  viewOX = (cvs.width - WORLD_W*viewScale)/2;
+  viewOY = (cvs.height - WORLD_H*viewScale)/2 + 52*viewScale;
+}
+new ResizeObserver(layout).observe(viewport);
+layout();
+
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);
+  // sky clears from milky (polluted) to saturated blue (clean air)
+  const mix=(a,b)=>Math.round(a+(b-a)*(1-state.haze));
+  const sky = ctx.createLinearGradient(0,0,0,cvs.height);
+  sky.addColorStop(0,`rgb(${mix(163,110)} ${mix(206,196)} ${mix(226,238)})`);
+  sky.addColorStop(1,`rgb(${mix(203,182)} ${mix(226,230)} ${mix(237,246)})`);
+  ctx.fillStyle=sky; ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.setTransform(viewScale,0,0,viewScale,viewOX,viewOY);
+
+  drawSun();
+  drawSea(state.t);
+  // sort ships by screen y for painter's order
+  const ships=[...state.ships].sort((a,b)=>shipPos(a).y-shipPos(b).y);
+  for(const sh of ships) drawShip(sh);
+  drawSmoke();
+  // pre-2020 pollution haze: a milky band hanging over the water
+  if(state.haze>0.02){
+    const hz=ctx.createLinearGradient(0,-20,0,360);
+    hz.addColorStop(0,`rgba(225,228,224,${(state.haze*0.22).toFixed(3)})`);
+    hz.addColorStop(1,'rgba(225,228,224,0)');
+    ctx.fillStyle=hz;
+    ctx.fillRect(-WORLD_W*0.2,-60,WORLD_W*1.4,440);
+  }
+  drawPhotons();
+  drawClouds();
+}
+
+/* ---------- HUD ---------- */
+const $=id=>document.getElementById(id);
+function fmtF(v){ return (v<=0?'−':'+') + Math.abs(v).toFixed(2) + ' W/m²'; }
+function updateHUD(){
+  $('forceVal').textContent = fmtF(state.forcing);
+  $('forceVal').classList.toggle('cool', state.forcing<-0.02);
+  const fb=$('forceBar');
+  const frac=clamp(state.forcing/0.2,-1,1);
+  if(frac<0){ fb.style.left=(50+frac*48)+'%'; fb.style.width=(-frac*48)+'%'; fb.classList.remove('warm'); }
+  else { fb.style.left='50%'; fb.style.width=(frac*48)+'%'; fb.classList.add('warm'); }
+  // polarity is explicit: arrow + word + color, not just a sign
+  const sv=$('sstVal'), sw=$('sstWord'), T=state.sst;
+  let arrow, word, color;
+  if(T>0.004){
+    arrow='▲'; word='warmer than 2019';
+    const f=clamp(T/0.2,0,1); color=`hsl(${22-f*12} 78% ${44+f*4}%)`;
+  } else if(T<-0.004){
+    arrow='▼'; word='cooler than 2019'; color='var(--graph-line)';
+  } else {
+    arrow='●'; word='at the 2019 baseline'; color='';
+  }
+  sv.textContent = `${arrow} ${T>=0?'+':'−'}${Math.abs(T).toFixed(2)} °C`;
+  sv.style.color=color; sw.textContent=word; sw.style.color=color;
+  $('sstMark').style.left = 'calc('+(clamp((T+0.05)/0.30,0,1)*100).toFixed(1)+'% - 2px)';
+  let vis=0; for(const p of state.puffs) if(p.life>0.3 && p.bright>0.5) vis++;
+  $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mTot = Math.floor(state.simYears*12);
+  $('timeChip').textContent = `${MONTHS[mTot%12]}, Year ${Math.floor(mTot/12)+1}`;
+  $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
+  $('photVal').textContent = Math.round(state.reflEMA*100)+'%';
+  drawPhotGraph();
+}
+
+/* ---- rolling sparkline: share of sunlight reflected ---- */
+const pg = $('photGraph');
+const pgc = pg.getContext('2d');
+let pgHover = -1;   // hovered sample index, -1 = none
+function drawPhotGraph(){
+  const rect = pg.getBoundingClientRect();
+  if(rect.width===0) return;
+  const dpr = Math.min(devicePixelRatio||1,2);
+  if(pg.width!==Math.round(rect.width*dpr)){ pg.width=Math.round(rect.width*dpr); pg.height=Math.round(rect.height*dpr); }
+  const W=pg.width, H=pg.height;
+  const css = getComputedStyle(document.documentElement);
+  const cLine = css.getPropertyValue('--graph-line').trim() || '#2f6f9f';
+  const cFill = css.getPropertyValue('--graph-fill').trim() || 'rgba(77,143,190,.3)';
+  const cGrid = css.getPropertyValue('--graph-grid').trim() || 'rgba(90,80,60,.25)';
+  const cInk  = css.getPropertyValue('--panel-ink').trim() || '#33291c';
+  pgc.clearRect(0,0,W,H);
+  const hist = state.photHist;
+  const pad = 3*dpr, bot = H-3*dpr, top = 3*dpr;
+  const yOf = v => bot - v*(bot-top);
+  // faint grid at 0 / 50 / 100 %
+  pgc.strokeStyle=cGrid; pgc.lineWidth=1*dpr;
+  for(const v of [0,0.5,1]){
+    pgc.beginPath(); pgc.moveTo(pad,yOf(v)); pgc.lineTo(W-pad,yOf(v)); pgc.stroke();
+  }
+  if(hist.length<2) return;
+  const n=hist.length, span=110;                     // fixed window so the line grows in from the right
+  const xOf = k => pad + (W-2*pad) * ( (span-n+k) / (span-1) );
+  // area fill
+  pgc.beginPath();
+  pgc.moveTo(xOf(0), bot);
+  for(let k=0;k<n;k++) pgc.lineTo(xOf(k), yOf(hist[k]));
+  pgc.lineTo(xOf(n-1), bot); pgc.closePath();
+  pgc.fillStyle=cFill; pgc.fill();
+  // line
+  pgc.beginPath();
+  for(let k=0;k<n;k++){ const x=xOf(k), y=yOf(hist[k]); k? pgc.lineTo(x,y):pgc.moveTo(x,y); }
+  pgc.strokeStyle=cLine; pgc.lineWidth=2*dpr; pgc.lineJoin='round'; pgc.stroke();
+  // emphasized endpoint
+  pgc.fillStyle=cLine;
+  pgc.beginPath(); pgc.arc(xOf(n-1), yOf(hist[n-1]), 3.5*dpr, 0, 6.29); pgc.fill();
+  // hover readout
+  if(pgHover>=0 && pgHover<n){
+    const hx=xOf(pgHover), hy=yOf(hist[pgHover]);
+    pgc.strokeStyle=cInk; pgc.lineWidth=1*dpr;
+    pgc.beginPath(); pgc.moveTo(hx,top); pgc.lineTo(hx,bot); pgc.stroke();
+    pgc.beginPath(); pgc.arc(hx,hy,3*dpr,0,6.29);
+    pgc.fillStyle=cLine; pgc.fill();
+    pgc.lineWidth=2*dpr; pgc.strokeStyle=css.getPropertyValue('--meter-bg').trim()||'#c3b797'; pgc.stroke();
+    const label=Math.round(hist[pgHover]*100)+'%';
+    pgc.font=`${11*dpr}px ui-monospace,Menlo,monospace`;
+    pgc.fillStyle=cInk;
+    const tw=pgc.measureText(label).width;
+    const tx=clamp(hx-tw/2, 2*dpr, W-tw-2*dpr);
+    pgc.fillText(label, tx, top+11*dpr);
+  }
+}
+pg.addEventListener('pointermove',e=>{
+  const rect=pg.getBoundingClientRect();
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const n=state.photHist.length, span=110, pad=3*dpr, W=pg.width;
+  if(n<2) return;
+  const xpx=(e.clientX-rect.left)*dpr;
+  const k=Math.round( (xpx-pad)/(W-2*pad)*(span-1) - (span-n) );
+  pgHover=clamp(k,0,n-1);
+  drawPhotGraph();
+});
+pg.addEventListener('pointerleave',()=>{ pgHover=-1; drawPhotGraph(); });
+
+/* ---------- loop ---------- */
+let last=performance.now(), hudAcc=0;
+function frame(now){
+  const raw=(now-last)/1000; last=now;
+  if(state.running){
+    const dt=Math.min(raw,0.05)*state.speed;
+    step(dt);
+  }
+  render();
+  hudAcc+=raw; if(hudAcc>0.2){ hudAcc=0; updateHUD(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- controls ---------- */
+function setRunning(on){
+  state.running=on;
+  $('playBtn').textContent = on? '❚❚ Pause' : '▶ Play';
+  $('playBtn').setAttribute('aria-pressed', String(on));
+  viewport.classList.toggle('is-paused', !on);
+  document.body.classList.toggle('paused', !on);
+}
+$('playBtn').addEventListener('click',()=>setRunning(!state.running));
+$('speedSel').addEventListener('change',e=>state.speed=parseFloat(e.target.value));
+$('shipRange').addEventListener('input',e=>{
+  state.shipsWanted=+e.target.value;
+  $('shipCount').textContent=e.target.value;
+  syncFleet();
+});
+function setEra(era){
+  if(state.era===era) return;
+  state.era=era;
+  $('eraPre').setAttribute('aria-pressed', String(era==='pre'));
+  $('eraPost').setAttribute('aria-pressed', String(era==='post'));
+  const badge=$('eraBadge');
+  badge.textContent = era==='post' ? 'IMO 2020 era · 0.5% S' : 'High-sulfur era · 3.5% S';
+  badge.classList.toggle('post', era==='post');
+  if(era==='post'){
+    // theatrical dissolve: existing sulfur tracks starve fast
+    for(const p of state.puffs) p.decay = Math.max(p.decay, 1/4.5);
+  }
+  banner(era==='post'
+    ? 'NEWS: IMO 2020 in force — fuel sulfur capped at 0.5%!'
+    : 'NEWS: high-sulfur fuel returns — clouds brighten again');
+}
+$('eraPre').addEventListener('click',()=>setEra('pre'));
+$('eraPost').addEventListener('click',()=>setEra('post'));
+$('mcbBtn').addEventListener('click',()=>{
+  state.mcb=!state.mcb;
+  $('mcbBtn').setAttribute('aria-pressed',String(state.mcb));
+  $('mcbRow').hidden = !state.mcb;
+  syncFleet();
+  if(state.mcb) banner('Marine cloud brightening trial: salt-spray fleet deployed');
+});
+$('sprayRange').addEventListener('input',e=>{
+  state.sprayersWanted=+e.target.value;
+  $('sprayCount').textContent=e.target.value;
+  syncFleet();
+});
+$('resetBtn').addEventListener('click',reset);
+function reset(){
+  state.puffs.length=0; state.smoke.length=0; state.photons.length=0; state.ripples.length=0;
+  state.flashes.length=0;
+  state.photHist.length=0; pgHover=-1;
+  state.heat.fill(0);
+  state.reflEMA = state.era==='pre'? 0.55 : 0.2;
+  state.haze = state.era==='pre'? 1 : 0;
+  state.sst=0; state.forcing = state.era==='pre'? -0.14 : -0.02;
+  state.reflected=0; state.total=0; state.simYears=0;
+  updateHUD();
+}
+addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,button,textarea')) return; // native behavior there
+  if(e.key===' '){ e.preventDefault(); setRunning(!state.running); }
+  if(e.key==='r'||e.key==='R') reset();
+});
+
+let bannerTimer=null;
+function banner(msg){
+  const b=$('banner'); b.textContent=msg; b.classList.add('show');
+  clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>b.classList.remove('show'), 4200);
+}
+if (reducedMotion){ setRunning(false); banner('Reduced motion detected — press Play to run the simulation'); }
+
+/* warm-up: let the pre-2020 world establish itself before first paint */
+for(let w=0;w<260;w++) step(0.1);
+state.reflected=0; state.total=0; state.sst=0; state.simYears=0;
+
+/* ---------- news ticker (audit-verified findings) ---------- */
+const FACTS = [
+  ['CONOVER, 1966','strange bright cloud lines spotted in early weather-satellite photos — ships below.'],
+  ['TWOMEY EFFECT','same water, more droplets → brighter clouds. Sulfur particles seed the droplets.'],
+  ['DIAMOND 2020','SE Atlantic shipping corridor clouds blocked ≈2 W/m² of sunlight — first regional-scale detection.'],
+  ['MANSHAUSEN 2022','ships change clouds even when no track is visible — older studies undercounted the effect.'],
+  ['YUAN 2022','deep-learning census: ship tracks ~10× more common than surveys thought… until 2020, when they hit record lows.'],
+  ['IMO 2020','marine fuel sulfur capped at 0.5% (was 3.5%). Cleaner air — and dimmer clouds.'],
+  ['MODEL CONSENSUS','three modeling systems agree: the sulfur cut added ≈ +0.12 to +0.14 W/m² of warming forcing.'],
+  ['JORDAN & HENRY 2024','≈ +0.05 °C this decade — about 2–3 years of global warming pulled forward.'],
+  ['YUAN 2024','high estimate: +0.2 W/m² over the ocean — an "inadvertent geoengineering termination shock."'],
+  ['ZHANG 2025','the forcing is real but hard to see: detection rates as low as 12% against natural cloud noise.'],
+  ['FEINGOLD 2024','31 scientists: marine cloud brightening needs labs, field trials and models before anyone deploys it.'],
+  ['OPEN QUESTION','how much of record-hot 2023 was the missing ship tracks? Estimates run from ~0.03 °C to half the anomaly.']
+];
+$('tickerInner').innerHTML = FACTS.map(f=>`<b>${f[0]}</b>&nbsp; ${f[1]} &nbsp;&nbsp;·&nbsp;&nbsp;`).join('');
+/* pace the ticker at a fixed readable speed regardless of content/viewport width */
+function paceTicker(){
+  const el=$('tickerInner');
+  const dist=el.scrollWidth;              // content + the 100% lead-in padding
+  el.style.animationDuration = Math.max(60, Math.round(dist/48)) + 's';
+}
+paceTicker();
+addEventListener('resize', paceTicker);
+
+updateHUD();
+</script>
+
+</body>
+</html>
