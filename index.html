@@ -73,6 +73,14 @@
   }
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 
+  .draft-flag{
+    background:var(--accent);color:#fff;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:clamp(16px,2.6vw,24px);font-weight:700;
+    letter-spacing:.3em;text-transform:uppercase;text-align:center;
+    padding:10px 16px;
+    border-bottom:3px solid #7c2a23;
+  }
   header.marquee{
     display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
     padding:12px 16px 8px;
@@ -257,6 +265,8 @@
 </style>
 </head>
 <body>
+
+<div class="draft-flag">Draft — First Pass</div>
 
 <header class="marquee">
   <h1>Ship Tracks Tycoon <span class="flag">— the great inadvertent climate experiment</span></h1>
