@@ -488,6 +488,7 @@ const state = {
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (reducedMotion) state.running = false;
+let warmupPhase = false;   // true only while pre-rendering the initial scene
 
 /* ---------- helpers ---------- */
 const rand = (a,b)=>a+Math.random()*(b-a);
@@ -561,7 +562,8 @@ function step(dt){
   state.t += dt;
   state.simYears += dt/12;                        // 12 s ≈ 1 sim year; calendar starts 2018
   // history happens on schedule: the sulfur cap arrives in January 2020
-  if(!state.autoFlipped && state.simYears>=2){
+  // (never during the pre-render warm-up, whose clock gets discarded)
+  if(!warmupPhase && !state.autoFlipped && state.simYears>=2){
     state.autoFlipped = true;
     if(state.era==='pre') setEra('post');
   }
@@ -1131,7 +1133,9 @@ function banner(msg){
 if (reducedMotion){ setRunning(false); banner('Reduced motion detected — press Play to run the simulation'); }
 
 /* warm-up: let the pre-2020 world establish itself before first paint */
+warmupPhase = true;
 for(let w=0;w<260;w++) step(0.1);
+warmupPhase = false;
 state.reflected=0; state.total=0; state.sst=0; state.simYears=0;
 
 /* ---------- hover tooltips on scene entities ---------- */
