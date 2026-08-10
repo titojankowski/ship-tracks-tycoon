@@ -506,10 +506,10 @@ function makeShip(lane, sprayer=false){
     bob: Math.random()*6.28
   };
 }
-function hullColor(sh){
+function hullBase(sh){
   if(sh.sprayer) return '#e8e8e0';
-  // fuel is the hull color: green = pre-2020 high-sulfur, red = IMO 2020 low-sulfur
-  return shade(state.era==='pre' ? '#4f7a45' : '#b23a34', sh.tint);
+  // fuel is the boat color: green = pre-2020 high-sulfur, red = IMO 2020 low-sulfur
+  return state.era==='pre' ? '#58884d' : '#c04a40';
 }
 function shipPos(sh){
   const k = sh.lane;
@@ -758,17 +758,17 @@ function drawShip(sh){
   // shadow
   ctx.fillStyle='rgba(10,30,40,.25)';
   ctx.beginPath(); ctx.ellipse(0, 10, 26, 7, 0, 0, 6.29); ctx.fill();
-  // hull: iso box, colored by fuel era
-  const hull = hullColor(sh);
+  // hull: iso box, whole boat colored by fuel era (tint = per-ship variation)
+  const base = hullBase(sh), tv = sh.sprayer? 0 : sh.tint;
   const w=48,h=12,d=14;
   // deck top
-  ctx.fillStyle = shade(hull, 18);
+  ctx.fillStyle = shade(base, tv+18);
   poly([[-w/2,0],[0,-d/2],[w/2,0],[0,d/2]]);
   // left face
-  ctx.fillStyle = shade(hull, -14);
+  ctx.fillStyle = shade(base, tv-14);
   poly([[-w/2,0],[0,d/2],[0,d/2+h],[-w/2,h]]);
   // right face
-  ctx.fillStyle = hull;
+  ctx.fillStyle = shade(base, tv);
   poly([[w/2,0],[0,d/2],[0,d/2+h],[w/2,h]]);
   // superstructure
   ctx.fillStyle = sh.sprayer? '#cfe4ee' : '#e6e2d4';
@@ -781,11 +781,11 @@ function drawShip(sh){
   ctx.fillStyle = sh.sprayer ? '#6fa3bd' : '#3a3a3a';
   ctx.fillRect(8,-16,5,9);
   if(sh.sprayer){ ctx.fillStyle='#eaf6fc'; ctx.fillRect(6,-19,9,3); }
-  // containers on cargo ships
+  // containers on cargo ships — same fuel color, stepped shades
   if(!sh.sprayer){
-    const cols=['#c96f3a','#5c86b5','#7a9a56'];
+    const steps=[34,8,22];
     for(let c=0;c<3;c++){
-      ctx.fillStyle=cols[c];
+      ctx.fillStyle=shade(base, tv+steps[c]);
       poly([[-w/2+8+c*11,-3],[-w/2+14+c*11,-6],[-w/2+20+c*11,-3],[-w/2+14+c*11,0]]);
     }
   }
