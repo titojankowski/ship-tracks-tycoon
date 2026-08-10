@@ -246,7 +246,7 @@
   #sstWord{margin-top:-4px;transition:color .5s;font-weight:600}
   .sea-scale .zmark{
     position:absolute;top:-4px;bottom:-4px;width:2px;
-    left:calc(16.7% - 1px);
+    left:calc(23.1% - 1px);
     background:var(--panel-ink);opacity:.75;
   }
   .sea-scale i{
@@ -349,8 +349,8 @@
     <canvas id="sea" aria-label="Isometric animated simulation of ships forming bright cloud tracks over the ocean"></canvas>
     <div class="era-badge" id="eraBadge">High-sulfur era · 3.5% S</div>
     <div class="hover-tip" id="hoverTip" hidden><b id="tipName"></b><span id="tipBody"></span></div>
-    <div class="time-chip" aria-label="Elapsed simulation time">
-      <span id="timeChip">January, 2018</span>
+    <div class="time-chip" aria-label="Simulated year">
+      <span id="timeChip">2010</span>
       <i class="yearbar" id="yearBar"></i>
     </div>
     <div class="paused-veil">Paused</div>
@@ -375,7 +375,7 @@
         <button id="eraPre" aria-pressed="true">Pre-2020<br><span class="hint">3.5%&nbsp;S fuel</span></button>
         <button id="eraPost" class="danger" aria-pressed="false">IMO&nbsp;2020<br><span class="hint">0.5%&nbsp;S fuel</span></button>
       </div>
-      <span class="hint" id="eraHint">High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in January 2020, or pull the lever yourself.</span>
+      <span class="hint" id="eraHint">High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in 2020, or pull the lever yourself.</span>
     </div>
 
     <div class="lever">
@@ -400,7 +400,7 @@
         <div class="row"><span class="name">Ocean temp</span><span class="val" id="sstVal">● 0.00 °C</span></div>
         <div class="row"><span class="hint" id="sstWord">at the 2019 baseline</span></div>
         <div class="sea-scale" aria-hidden="true"><b class="zmark"></b><i id="sstMark"></i></div>
-        <div class="row scale-caps"><span class="hint">−0.05°</span><span class="hint">notch = 2019 · sea color matches</span><span class="hint">+0.25°</span></div>
+        <div class="row scale-caps"><span class="hint">−0.03°</span><span class="hint">notch = 2019 · sea color matches</span><span class="hint">+0.10°</span></div>
       </div>
       <div class="meter">
         <div class="row"><span class="name">Visible ship tracks</span><span class="val" id="trackVal">0</span></div>
@@ -424,7 +424,7 @@
         <li><b>Sea color = temperature</b>: indigo is cooler than 2019, deep blue is the baseline, and warming walks it through teal and green toward hot yellow-green. A big sprayer fleet can cool it below baseline.</li>
         <li><b>IMO 2020 lever</b>: the real-world rule cut fuel sulfur 3.5%→0.5%. Tracks collapsed; hidden warming emerged.</li>
         <li><b>Sprayer boats</b> are marine cloud brightening — proposed deliberate track-making with sea salt.</li>
-        <li>Meters are toy-scaled to real published magnitudes, not a climate model.</li>
+        <li>The clock ticks one year per beat. Warming follows the coupled-model consensus pace (~+0.05 °C per decade once the sulfur cooling is gone) — still a toy, not a climate model.</li>
         <li>Keyboard: <span class="kbd">Space</span> pause · <span class="kbd">R</span> reset</li>
       </ul>
     </details>
@@ -564,10 +564,10 @@ function emitStrength(sh){
 }
 function step(dt){
   state.t += dt;
-  state.simYears += dt/12;                        // 12 s ≈ 1 sim year; calendar starts 2018
-  // history happens on schedule: the sulfur cap arrives in January 2020
+  state.simYears += dt/2;                         // 2 s ≈ 1 sim year; calendar starts 2010
+  // history happens on schedule: the sulfur cap arrives in 2020
   // (never during the pre-render warm-up, whose clock gets discarded)
-  if(!warmupPhase && !state.autoFlipped && state.simYears>=2){
+  if(!warmupPhase && !state.autoFlipped && state.simYears>=10){
     state.autoFlipped = true;
     if(state.era==='pre') setEra('post');
   }
@@ -708,10 +708,11 @@ function step(dt){
   // shipping cloud effect: -0.14 W/m² at dens=1 (≈ model-consensus unmasking magnitude)
   const targetF = -0.14 * dens;
   state.forcing += (targetF - state.forcing) * Math.min(1, dt*0.8);
-  // SST integrates the gap vs the pre-2020 baseline (-0.14); decades compressed so the change is visible
+  // SST integrates the gap vs the pre-2020 baseline (-0.14) at the coupled-model
+  // consensus pace (~+0.005 °C per year once the sulfur cooling is gone)
   const dF = state.forcing - (-0.14);
-  state.sst += dF * 0.16 * (dt/12);
-  state.sst = clamp(state.sst, -0.08, 0.40);
+  state.sst += dF * 0.037 * (dt/2);
+  state.sst = clamp(state.sst, -0.06, 0.15);
 }
 
 /* ---------- drawing ---------- */
@@ -738,7 +739,7 @@ function seaTileColor(i,j,t){
   const wave = Math.sin(t*1.4 + (i+j)*0.7) * 0.5 + Math.sin(t*0.9 + (i-j)*0.9)*0.5;
   const clean = 1-state.haze;
   // temperature IS the color: global SST (full scale at +0.25°) + local heating where sun lands
-  const w = clamp( state.sst/0.25 + state.heat[i*N+j]*0.5, -0.2, 1 );
+  const w = clamp( state.sst/0.10 + state.heat[i*N+j]*0.5, -0.2, 1 );
   const [,h,s,l]=seaHSL(w);
   return `hsl(${(h-clean*6).toFixed(1)} ${(s+clean*6).toFixed(1)}% ${(l + wave*4 + ((i+j)%2?-2:2) + clean*3).toFixed(1)}%)`;
 }
@@ -954,7 +955,7 @@ function updateHUD(){
   let arrow, word, color;
   if(T>0.004){
     arrow='▲'; word='warmer than 2019';
-    const f=clamp(T/0.2,0,1); color=`hsl(${22-f*12} 78% ${44+f*4}%)`;
+    const f=clamp(T/0.08,0,1); color=`hsl(${22-f*12} 78% ${44+f*4}%)`;
   } else if(T<-0.004){
     arrow='▼'; word='cooler than 2019'; color='var(--graph-line)';
   } else {
@@ -962,12 +963,10 @@ function updateHUD(){
   }
   sv.textContent = `${arrow} ${T>=0?'+':'−'}${Math.abs(T).toFixed(2)} °C`;
   sv.style.color=color; sw.textContent=word; sw.style.color=color;
-  $('sstMark').style.left = 'calc('+(clamp((T+0.05)/0.30,0,1)*100).toFixed(1)+'% - 2px)';
+  $('sstMark').style.left = 'calc('+(clamp((T+0.03)/0.13,0,1)*100).toFixed(1)+'% - 2px)';
   let vis=0; for(const p of state.puffs) if(p.life>0.3 && p.bright>0.5) vis++;
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
-  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const mTot = Math.floor(state.simYears*12);
-  $('timeChip').textContent = `${MONTHS[mTot%12]}, ${2018+Math.floor(mTot/12)}`;
+  $('timeChip').textContent = String(2010+Math.floor(state.simYears));
   $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
   $('photVal').textContent = Math.round(state.reflEMA*100)+'%';
   drawPhotGraph();
@@ -1073,7 +1072,7 @@ $('shipRange').addEventListener('input',e=>{
 const ERA_META = {
   pre:  { badge:'High-sulfur era · 3.5% S',
           news:'NEWS: high-sulfur fuel returns — clouds brighten again',
-          hint:'High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in January 2020, or pull the lever yourself.' },
+          hint:'High-sulfur exhaust seeds bright, cooling clouds. History runs on its own — the IMO 2020 rule arrives in 2020, or pull the lever yourself.' },
   post: { badge:'IMO 2020 era · 0.5% S',
           news:'NEWS: IMO 2020 in force — fuel sulfur capped at 0.5%!',
           hint:'Cleaner air, dimmer clouds: the hidden warming emerges.' }
@@ -1109,7 +1108,7 @@ $('sprayRange').addEventListener('input',e=>{
 });
 $('resetBtn').addEventListener('click',reset);
 function reset(){
-  // restart the historical replay: 2018, high-sulfur world
+  // restart the historical replay: 2010, high-sulfur world
   if(state.era!=='pre') setEra('pre');
   state.autoFlipped=false;
   state.puffs.length=0; state.smoke.length=0; state.photons.length=0; state.ripples.length=0;
@@ -1213,7 +1212,7 @@ const INTRO_STEPS = [
   { art:'☀️🔁', title:'Follow the sunlight',
     body:'Watch the sparks falling from the sun. Rays that hit a bright track bounce back to space — that cools the planet. Rays that reach the dark water warm it, and the sea color shifts from cool blue toward warm green.' },
   { art:'🎛️🌊', title:'Now run the experiment',
-    body:'The clock starts in 2018, when ships still burned high-sulfur fuel. In January 2020 a real regulation (IMO 2020) cuts the sulfur ~86% — watch the tracks vanish and the hidden warming emerge. Too impatient? Pull the lever yourself. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
+    body:'The clock ticks one year at a time, starting in 2010, when ships still burned high-sulfur fuel. In 2020 a real regulation (IMO 2020) cuts the sulfur ~86% — watch the tracks vanish and the hidden warming build at the pace climate models actually predict. Too impatient? Pull the lever yourself. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
 ];
 let introStep=0, introWasRunning=null;
 function introRender(){
