@@ -148,6 +148,23 @@
     pointer-events:none;transition:background .5s;
   }
   .era-badge.post{background:var(--accent)}
+  .hover-tip{
+    position:absolute;z-index:5;max-width:230px;
+    background:var(--panel);color:var(--panel-ink);
+    border:2px solid var(--panel-lo);
+    border-top-color:var(--panel-hi);border-left-color:var(--panel-hi);
+    border-radius:4px;padding:7px 9px;
+    box-shadow:0 3px 0 rgba(0,0,0,.3);
+    font-size:12px;line-height:1.4;
+    pointer-events:none;
+  }
+  .hover-tip b{
+    display:block;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .hover-tip[hidden]{display:none}
   .time-chip{
     position:absolute;right:12px;bottom:12px;
     font-family:ui-monospace,Menlo,Consolas,monospace;
@@ -331,6 +348,7 @@
   <div class="viewport" id="viewport">
     <canvas id="sea" aria-label="Isometric animated simulation of ships forming bright cloud tracks over the ocean"></canvas>
     <div class="era-badge" id="eraBadge">High-sulfur era · 3.5% S</div>
+    <div class="hover-tip" id="hoverTip" hidden><b id="tipName"></b><span id="tipBody"></span></div>
     <div class="time-chip" aria-label="Elapsed simulation time">
       <span id="timeChip">January, Year 1</span>
       <i class="yearbar" id="yearBar"></i>
@@ -1112,6 +1130,70 @@ if (reducedMotion){ setRunning(false); banner('Reduced motion detected — press
 /* warm-up: let the pre-2020 world establish itself before first paint */
 for(let w=0;w<260;w++) step(0.1);
 state.reflected=0; state.total=0; state.sst=0; state.simYears=0;
+
+/* ---------- hover tooltips on scene entities ---------- */
+function tipForShip(sh){
+  if(sh.sprayer) return ['Sprayer boat',
+    'Sprays a fine sea-salt mist to brighten the clouds on purpose — marine cloud brightening, the deliberate version of a ship track.'];
+  if(state.era==='elec') return ['Electric cargo ship',
+    'No exhaust at all — nothing to seed the clouds with. The power still has to be generated somewhere.'];
+  if(state.era==='post') return ['Cargo ship (low-sulfur fuel)',
+    'Burning 0.5%-sulfur fuel under IMO 2020. Cleaner air, but its exhaust barely brightens the clouds anymore.'];
+  return ['Cargo ship (heavy fuel oil)',
+    'Burning 3.5%-sulfur fuel. Its exhaust rises into the cloud deck and seeds a bright, cooling ship track.'];
+}
+const TIP_SUN=['The Sun',
+  'Delivers about 340 W/m² to Earth on average. This whole story is a fight over what fraction gets bounced back to space.'];
+const TIP_TRACK=['Ship track',
+  'A cloud brightened by ship exhaust: more, smaller droplets reflect more sunlight — the Twomey effect. Satellites have photographed these since 1966.'];
+const TIP_CLOUD=['Marine stratocumulus',
+  'Low ocean cloud — the planet’s natural sunshade. How it responds to aerosol is the biggest wildcard in climate forcing.'];
+function sceneHitTest(wx,wy){
+  for(const sh of state.ships){
+    const p=shipPos(sh);
+    if(Math.abs(wx-p.x)<34 && Math.abs(wy-p.y)<26) return tipForShip(sh);
+  }
+  if(Math.hypot(wx-WORLD_W*0.07, wy-(-14))<62) return TIP_SUN;
+  for(const p of state.puffs){
+    if(p.life>0.2 && Math.abs(wx-p.x)<p.r+6 && Math.abs(wy-(p.y+38))<p.r*0.62+6) return TIP_TRACK;
+  }
+  for(const c of state.clouds){
+    for(const b of c.blobs){
+      if(Math.abs(wx-(c.x+b.dx))<b.r && Math.abs(wy-(30+c.y+b.dy))<b.r*0.6) return TIP_CLOUD;
+    }
+  }
+  return null;
+}
+cvs.addEventListener('pointermove',e=>{
+  const rect=cvs.getBoundingClientRect();
+  const px=(e.clientX-rect.left)*(cvs.width/rect.width);
+  const py=(e.clientY-rect.top)*(cvs.height/rect.height);
+  const wx=(px-viewOX)/viewScale, wy=(py-viewOY)/viewScale;
+  const hit=sceneHitTest(wx,wy);
+  const tip=$('hoverTip');
+  if(hit){
+    $('tipName').textContent=hit[0]; $('tipBody').textContent=hit[1];
+    tip.hidden=false;
+    const vr=viewport.getBoundingClientRect();
+    let tx=e.clientX-vr.left+14, ty=e.clientY-vr.top+14;
+    tip.style.left='0px'; tip.style.top='0px';           // measure at origin
+    const tw=tip.offsetWidth, th=tip.offsetHeight;
+    if(tx+tw>vr.width-8) tx=e.clientX-vr.left-tw-10;
+    if(ty+th>vr.height-8) ty=e.clientY-vr.top-th-10;
+    tip.style.left=Math.max(4,tx)+'px'; tip.style.top=Math.max(4,ty)+'px';
+    cvs.style.cursor='help';
+  } else {
+    tip.hidden=true; cvs.style.cursor='';
+  }
+});
+cvs.addEventListener('pointerleave',()=>{ $('hoverTip').hidden=true; cvs.style.cursor=''; });
+let touchTipTimer=null;
+cvs.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch') return;
+  cvs.dispatchEvent(new PointerEvent('pointermove',{clientX:e.clientX,clientY:e.clientY}));
+  clearTimeout(touchTipTimer);
+  touchTipTimer=setTimeout(()=>{ $('hoverTip').hidden=true; },2600);
+});
 
 /* ---------- intro tour ---------- */
 const INTRO_STEPS = [
