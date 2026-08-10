@@ -246,7 +246,7 @@
   #sstWord{margin-top:-4px;transition:color .5s;font-weight:600}
   .sea-scale .zmark{
     position:absolute;top:-4px;bottom:-4px;width:2px;
-    left:calc(23.1% - 1px);
+    left:calc(25% - 1px);
     background:var(--panel-ink);opacity:.75;
   }
   .sea-scale i{
@@ -400,7 +400,7 @@
         <div class="row"><span class="name">Ocean temp</span><span class="val" id="sstVal">● 0.00 °C</span></div>
         <div class="row"><span class="hint" id="sstWord">at the 2019 baseline</span></div>
         <div class="sea-scale" aria-hidden="true"><b class="zmark"></b><i id="sstMark"></i></div>
-        <div class="row scale-caps"><span class="hint">−0.03°</span><span class="hint">notch = 2019 · sea color matches</span><span class="hint">+0.10°</span></div>
+        <div class="row scale-caps"><span class="hint">−0.02°</span><span class="hint">notch = 2019 · sea color matches</span><span class="hint">+0.06°</span></div>
       </div>
       <div class="meter">
         <div class="row"><span class="name">Visible ship tracks</span><span class="val" id="trackVal">0</span></div>
@@ -740,7 +740,7 @@ function seaTileColor(i,j,t){
   const wave = Math.sin(t*1.4 + (i+j)*0.7) * 0.5 + Math.sin(t*0.9 + (i-j)*0.9)*0.5;
   const clean = 1-state.haze;
   // temperature IS the color: global SST (full scale at +0.25°) + local heating where sun lands
-  const w = clamp( state.sst/0.10 + state.heat[i*N+j]*0.5, -0.2, 1 );
+  const w = clamp( state.sst/0.06 + state.heat[i*N+j]*0.5, -0.2, 1 );
   const [,h,s,l]=seaHSL(w);
   return `hsl(${(h-clean*6).toFixed(1)} ${(s+clean*6).toFixed(1)}% ${(l + wave*4 + ((i+j)%2?-2:2) + clean*3).toFixed(1)}%)`;
 }
@@ -956,7 +956,7 @@ function updateHUD(){
   let arrow, word, color;
   if(T>0.004){
     arrow='▲'; word='warmer than 2019';
-    const f=clamp(T/0.08,0,1); color=`hsl(${22-f*12} 78% ${44+f*4}%)`;
+    const f=clamp(T/0.05,0,1); color=`hsl(${22-f*12} 78% ${44+f*4}%)`;
   } else if(T<-0.004){
     arrow='▼'; word='cooler than 2019'; color='var(--graph-line)';
   } else {
@@ -964,7 +964,7 @@ function updateHUD(){
   }
   sv.textContent = `${arrow} ${T>=0?'+':'−'}${Math.abs(T).toFixed(2)} °C`;
   sv.style.color=color; sw.textContent=word; sw.style.color=color;
-  $('sstMark').style.left = 'calc('+(clamp((T+0.03)/0.13,0,1)*100).toFixed(1)+'% - 2px)';
+  $('sstMark').style.left = 'calc('+(clamp((T+0.02)/0.08,0,1)*100).toFixed(1)+'% - 2px)';
   let vis=0; for(const p of state.puffs) if(p.life>0.3 && p.bright>0.5) vis++;
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
   $('timeChip').textContent = String(2015+Math.floor(state.simYears));
