@@ -350,7 +350,7 @@
     <div class="era-badge" id="eraBadge">High-sulfur era · 3.5% S</div>
     <div class="hover-tip" id="hoverTip" hidden><b id="tipName"></b><span id="tipBody"></span></div>
     <div class="time-chip" aria-label="Simulated year">
-      <span id="timeChip">2010</span>
+      <span id="timeChip">2015</span>
       <i class="yearbar" id="yearBar"></i>
     </div>
     <div class="paused-veil">Paused</div>
@@ -564,10 +564,10 @@ function emitStrength(sh){
 }
 function step(dt){
   state.t += dt;
-  state.simYears += dt/2;                         // 2 s ≈ 1 sim year; calendar starts 2010
+  state.simYears += dt/2;                         // 2 s ≈ 1 sim year; calendar starts 2015
   // history happens on schedule: the sulfur cap arrives in 2020
   // (never during the pre-render warm-up, whose clock gets discarded)
-  if(!warmupPhase && !state.autoFlipped && state.simYears>=10){
+  if(!warmupPhase && !state.autoFlipped && state.simYears>=5){
     state.autoFlipped = true;
     if(state.era==='pre') setEra('post');
   }
@@ -967,7 +967,7 @@ function updateHUD(){
   $('sstMark').style.left = 'calc('+(clamp((T+0.03)/0.13,0,1)*100).toFixed(1)+'% - 2px)';
   let vis=0; for(const p of state.puffs) if(p.life>0.3 && p.bright>0.5) vis++;
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
-  $('timeChip').textContent = String(2010+Math.floor(state.simYears));
+  $('timeChip').textContent = String(2015+Math.floor(state.simYears));
   $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
   $('photVal').textContent = Math.round(state.reflEMA*100)+'%';
   drawPhotGraph();
@@ -1109,7 +1109,7 @@ $('sprayRange').addEventListener('input',e=>{
 });
 $('resetBtn').addEventListener('click',reset);
 function reset(){
-  // restart the historical replay: 2010, high-sulfur world
+  // restart the historical replay: 2015, high-sulfur world
   if(state.era!=='pre') setEra('pre');
   state.autoFlipped=false;
   state.puffs.length=0; state.smoke.length=0; state.photons.length=0; state.ripples.length=0;
@@ -1213,7 +1213,7 @@ const INTRO_STEPS = [
   { art:'☀️🔁', title:'Follow the sunlight',
     body:'Watch the sparks falling from the sun. Rays that hit a bright track bounce back to space — that cools the planet. Rays that reach the dark water warm it, and the sea color shifts from cool blue toward warm green.' },
   { art:'🎛️🌊', title:'Now run the experiment',
-    body:'The clock ticks one year at a time, starting in 2010, when ships still burned high-sulfur fuel. In 2020 a real regulation (IMO 2020) cuts the sulfur ~86% — watch the tracks vanish and the hidden warming build at the pace climate models actually predict. Too impatient? Pull the lever yourself. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
+    body:'The clock ticks one year at a time, starting in 2015, when ships still burned high-sulfur fuel. In 2020 a real regulation (IMO 2020) cuts the sulfur ~86% — watch the tracks vanish and the hidden warming build at the pace climate models actually predict. Too impatient? Pull the lever yourself. Then try the salt-spray boats. Every number is drawn from published science — see "Read the real science" in the panel.' }
 ];
 let introStep=0, introWasRunning=null;
 function introRender(){
