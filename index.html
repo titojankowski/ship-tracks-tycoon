@@ -496,16 +496,20 @@ function isoX(i,j){ return (i-j)*TW/2 + WORLD_W/2; }
 function isoY(i,j){ return (i+j)*TH/2; }
 
 /* ---------- entities ---------- */
-const HULLS = ['#b23a34','#3a5f8a','#4f7a45','#7a5a3a','#5b4a78'];
 function makeShip(lane, sprayer=false){
   return {
     lane, sprayer,
     s: Math.random(),                 // 0..1 along lane
     v: rand(0.018, 0.028),            // lane fraction / sec
-    hull: HULLS[(Math.random()*HULLS.length)|0],
+    tint: (rand(-16,16))|0,           // per-ship lightness variation on the era hull color
     emitAcc: 0,
     bob: Math.random()*6.28
   };
+}
+function hullColor(sh){
+  if(sh.sprayer) return '#e8e8e0';
+  // fuel is the hull color: green = pre-2020 high-sulfur, red = IMO 2020 low-sulfur
+  return shade(state.era==='pre' ? '#4f7a45' : '#b23a34', sh.tint);
 }
 function shipPos(sh){
   const k = sh.lane;
@@ -539,7 +543,6 @@ function syncFleet(){
   const wantSpray = state.mcb ? state.sprayersWanted : 0;
   while(sprayers.length < wantSpray){
     const sh = makeShip(LANES[(sprayers.length*2+1)%LANES.length], true);
-    sh.hull = '#e8e8e0';
     sprayers.push(sh); state.ships.push(sh);
   }
   while(sprayers.length > wantSpray){
@@ -567,7 +570,7 @@ function step(dt){
   for(const sh of state.ships){
     sh.s += sh.v*dt;
     sh.bob += dt*2.2;
-    if (sh.s>1.04){ sh.s=-0.04; if(!sh.sprayer) sh.hull=HULLS[(Math.random()*HULLS.length)|0]; }
+    if (sh.s>1.04){ sh.s=-0.04; sh.tint=(rand(-16,16))|0; }
     const p = shipPos(sh);
     // funnel smoke (visual only)
     sh.emitAcc += dt;
@@ -755,16 +758,17 @@ function drawShip(sh){
   // shadow
   ctx.fillStyle='rgba(10,30,40,.25)';
   ctx.beginPath(); ctx.ellipse(0, 10, 26, 7, 0, 0, 6.29); ctx.fill();
-  // hull: iso box
+  // hull: iso box, colored by fuel era
+  const hull = hullColor(sh);
   const w=48,h=12,d=14;
   // deck top
-  ctx.fillStyle = shade(sh.hull, 18);
+  ctx.fillStyle = shade(hull, 18);
   poly([[-w/2,0],[0,-d/2],[w/2,0],[0,d/2]]);
   // left face
-  ctx.fillStyle = shade(sh.hull, -14);
+  ctx.fillStyle = shade(hull, -14);
   poly([[-w/2,0],[0,d/2],[0,d/2+h],[-w/2,h]]);
   // right face
-  ctx.fillStyle = sh.hull;
+  ctx.fillStyle = hull;
   poly([[w/2,0],[0,d/2],[0,d/2+h],[w/2,h]]);
   // superstructure
   ctx.fillStyle = sh.sprayer? '#cfe4ee' : '#e6e2d4';
