@@ -407,8 +407,8 @@
         <div class="row"><span class="name">Visible ship tracks</span><span class="val" id="trackVal">0</span></div>
       </div>
       <div class="meter">
-        <div class="row"><span class="name">Sunlight reflected</span><span class="val" id="photVal">—</span></div>
-        <canvas id="photGraph" aria-label="Rolling share of incoming sunlight reflected back to space, most recent minute"></canvas>
+        <div class="row"><span class="name">Cloud brightness index</span><span class="val" id="photVal">—</span></div>
+        <canvas id="photGraph" aria-label="Cloud brightness index over recent decades — an illustrative relative scale, not measured albedo"></canvas>
       </div>
     </div>
 
@@ -422,6 +422,7 @@
         <li><b>Ships</b> burn fuel; sulfur in the exhaust seeds clouds with extra droplets.</li>
         <li><b>Bright cloud lines</b> are ship tracks — more, smaller droplets reflect more sun (the Twomey effect).</li>
         <li><b>Sun sparks</b> bounce off bright tracks (cooling ✓) or reach the dark ocean (warming).</li>
+        <li><b>Cloud brightness index</b> is an illustrative 0–100 scale relative to the busiest fleet — real-world albedo changes are far smaller (the forcing meter is the data-anchored one).</li>
         <li><b>Sea color = temperature</b>: indigo is cooler than 2019, deep blue is the baseline, and warming walks it through teal and green toward hot yellow-green. A big sprayer fleet can cool it below baseline.</li>
         <li><b>IMO 2020 lever</b>: the real-world rule cut fuel sulfur 3.5%→0.5%. Tracks collapsed; hidden warming emerged.</li>
         <li><b>Sprayer boats</b> are marine cloud brightening — proposed deliberate track-making with sea salt.</li>
@@ -662,10 +663,11 @@ function step(dt){
         // deposit heat into the sea tiles under the strike
         const ti=Math.floor(ph.ty/TH + (ph.x-WORLD_W/2)/TW);
         const tj=Math.floor(ph.ty/TH - (ph.x-WORLD_W/2)/TW);
-        for(let oi=-1;oi<=1;oi++) for(let oj=-1;oj<=1;oj++){
+        for(let oi=-2;oi<=2;oi++) for(let oj=-2;oj<=2;oj++){
           const ii=ti+oi, jj=tj+oj;
           if(ii>=0&&ii<N&&jj>=0&&jj<N){
-            const add=(oi===0&&oj===0)?0.45:0.16;
+            const dist=Math.abs(oi)+Math.abs(oj);
+            const add=[0.10,0.06,0.03,0.015,0.008][dist]||0;
             state.heat[ii*N+jj]=Math.min(1.2, state.heat[ii*N+jj]+add);
           }
         }
@@ -744,7 +746,7 @@ function seaTileColor(i,j,t){
   const wave = Math.sin(t*1.4 + (i+j)*0.7) * 0.5 + Math.sin(t*0.9 + (i-j)*0.9)*0.5;
   const clean = 1-state.haze;
   // temperature IS the color: global SST (full scale at +0.25°) + local heating where sun lands
-  const w = clamp( state.sst/0.10 + state.heat[i*N+j]*0.5, -0.2, 1 );
+  const w = clamp( state.sst/0.10 + state.heat[i*N+j]*0.15, -0.2, 1 );
   const [,h,s,l]=seaHSL(w);
   return `hsl(${(h-clean*6).toFixed(1)} ${(s+clean*6).toFixed(1)}% ${(l + wave*4 + ((i+j)%2?-2:2) + clean*3).toFixed(1)}%)`;
 }
@@ -973,7 +975,7 @@ function updateHUD(){
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
   $('timeChip').textContent = String(2015+Math.floor(state.simYears));
   $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
-  $('photVal').textContent = Math.round(state.reflEMA*100)+'%';
+  $('photVal').textContent = String(Math.round(state.reflEMA*100));
   drawPhotGraph();
 }
 
@@ -1025,7 +1027,7 @@ function drawPhotGraph(){
     pgc.beginPath(); pgc.arc(hx,hy,3*dpr,0,6.29);
     pgc.fillStyle=cLine; pgc.fill();
     pgc.lineWidth=2*dpr; pgc.strokeStyle=css.getPropertyValue('--meter-bg').trim()||'#c3b797'; pgc.stroke();
-    const label=Math.round(hist[pgHover]*100)+'%';
+    const label=String(Math.round(hist[pgHover]*100));
     pgc.font=`${11*dpr}px ui-monospace,Menlo,monospace`;
     pgc.fillStyle=cInk;
     const tw=pgc.measureText(label).width;
