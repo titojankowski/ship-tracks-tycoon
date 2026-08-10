@@ -708,10 +708,11 @@ function step(dt){
   // shipping cloud effect: -0.14 W/m² at dens=1 (≈ model-consensus unmasking magnitude)
   const targetF = -0.14 * dens;
   state.forcing += (targetF - state.forcing) * Math.min(1, dt*0.8);
-  // SST integrates the gap vs the pre-2020 baseline (-0.14) at the coupled-model
-  // consensus pace (~+0.005 °C per year once the sulfur cooling is gone)
+  // SST relaxes toward equilibrium at the coupled-model consensus pace:
+  // ~+0.005 °C/yr early on, saturating near +0.07 °C for the full sulfur cut
   const dF = state.forcing - (-0.14);
-  state.sst += dF * 0.037 * (dt/2);
+  const sstEq = dF * 0.5;
+  state.sst += (sstEq - state.sst) * Math.min(1, dt/(2*15));   // ~15-year approach
   state.sst = clamp(state.sst, -0.06, 0.15);
 }
 
