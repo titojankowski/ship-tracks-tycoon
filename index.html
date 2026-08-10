@@ -427,6 +427,7 @@
         <li><b>Bright cloud lines</b> are ship tracks — more, smaller droplets reflect more sun (the Twomey effect).</li>
         <li><b>Sun sparks</b> bounce off bright tracks (cooling ✓) or reach the dark ocean (warming).</li>
         <li><b>Cloud brightness index</b> is an illustrative 0–100 scale relative to the busiest fleet — real-world albedo changes are far smaller (the forcing meter is the data-anchored one).</li>
+        <li><b>Cooling saturates</b>: doubling the fleet doesn’t double the effect (droplet-rich clouds gain less). The forcing scale runs to −0.45 W/m²; published model estimates for shipping span −0.1 to −0.6.</li>
         <li><b>Sea color = temperature</b>: indigo is cooler than 2019, deep blue is the baseline, and warming walks it through teal and green toward hot yellow-green. A big sprayer fleet can cool it below baseline.</li>
         <li><b>IMO 2020 lever</b>: the real-world rule cut fuel sulfur 3.5%→0.5%. Tracks collapsed; hidden warming emerged.</li>
         <li><b>Sprayer boats</b> are marine cloud brightening — proposed deliberate track-making with sea salt.</li>
@@ -633,7 +634,7 @@ function step(dt){
     p.life -= p.decay*dt; p.x += p.vx*dt;
     if(p.life<=0 || p.x>WORLD_W+80) state.puffs.splice(i,1);
   }
-  if(state.puffs.length>700) state.puffs.splice(0,state.puffs.length-700);
+  if(state.puffs.length>1200) state.puffs.splice(0,state.puffs.length-1200);
 
   // ambient clouds drift
   for(const c of state.clouds){ c.x += c.v*dt; if(c.x>WORLD_W+90) { Object.assign(c, makeCloud(-80)); } }
@@ -731,9 +732,10 @@ function step(dt){
   // track density 0..1 given default fleet in pre-2020 era ≈ 1
   let dens=0;
   for(const p of state.puffs) dens += p.bright*Math.min(1,p.life*1.5);
-  dens = clamp(dens/252, 0, 1.6);    // ≈1 with the default 7-ship pre-2020 fleet; MCB fleets can exceed it
-  // shipping cloud effect: -0.14 W/m² at dens=1 (≈ model-consensus unmasking magnitude)
-  const targetF = -0.14 * dens;
+  dens = clamp(dens/252, 0, 3.2);    // ≈1 with the default 7-ship pre-2020 fleet; big fleets go beyond
+  // shipping cloud effect: saturating Twomey response — -0.14 W/m² at the default
+  // fleet (model consensus), asymptoting toward -0.45 (model high end is -0.6)
+  const targetF = -0.45 * (1 - Math.exp(-0.3727*dens));
   state.forcing += (targetF - state.forcing) * Math.min(1, dt*0.8);
   // SST relaxes toward equilibrium at the coupled-model consensus pace:
   // ~+0.005 °C/yr early on, saturating near +0.07 °C for the full sulfur cut
@@ -977,7 +979,7 @@ function updateHUD(){
   $('forceVal').textContent = fmtF(state.forcing);
   $('forceVal').classList.toggle('cool', state.forcing<-0.02);
   const fb=$('forceBar');
-  const frac=clamp(state.forcing/0.2,-1,1);
+  const frac=clamp(state.forcing/0.45,-1,1);
   if(frac<0){ fb.style.left=(50+frac*48)+'%'; fb.style.width=(-frac*48)+'%'; fb.classList.remove('warm'); }
   else { fb.style.left='50%'; fb.style.width=(frac*48)+'%'; fb.classList.add('warm'); }
   // polarity is explicit: arrow + word + color, not just a sign
