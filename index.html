@@ -520,7 +520,7 @@ function makeShip(laneIdx, sprayer=false){
   };
 }
 function hullBase(sh){
-  if(sh.sprayer) return '#e8e8e0';
+  if(sh.sprayer) return '#6a58a8';   // matches the MCB button purple
   // fuel is the boat color: green = pre-2020 high-sulfur, red = IMO 2020 low-sulfur
   return state.era==='pre' ? '#58884d' : '#c04a40';
 }
