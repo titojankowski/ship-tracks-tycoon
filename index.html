@@ -179,7 +179,7 @@
   }
   .time-chip .yearbar{
     position:absolute;left:0;bottom:0;height:6px;width:0;
-    background:#f5c84c;transition:width .3s linear;
+    background:#f5c84c;
   }
 
   /* ——— RCT-style control panel ——— */
@@ -999,7 +999,6 @@ function updateHUD(){
   let vis=0; for(const p of state.puffs) if(p.life>0.3 && p.bright>0.5) vis++;
   $('trackVal').textContent = Math.round(vis/60);  // ≈ puffs per persistent track line
   $('timeChip').textContent = String(2015+Math.floor(state.simYears));
-  $('yearBar').style.width = ((state.simYears%1)*100).toFixed(1)+'%';
   $('photVal').textContent = String(Math.round(state.reflEMA*100));
   drawPhotGraph();
 }
@@ -1081,6 +1080,8 @@ function frame(now){
     step(dt);
   }
   render();
+  // year-progress bar runs every frame so it visibly reaches the end before resetting
+  $('yearBar').style.width = ((state.simYears%1)*100).toFixed(2)+'%';
   hudAcc+=raw; if(hudAcc>0.2){ hudAcc=0; updateHUD(); }
   requestAnimationFrame(frame);
 }
