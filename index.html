@@ -367,9 +367,9 @@
     <div class="btn-row">
       <button id="playBtn" class="big" aria-pressed="true">❚❚ Pause</button>
       <select id="speedSel" aria-label="Simulation speed">
-        <option value="0.5">Slow ×0.5</option>
-        <option value="1" selected>Normal ×1</option>
-        <option value="2">Fast ×2</option>
+        <option value="0.75">Slow ×0.5</option>
+        <option value="1.5" selected>Normal ×1</option>
+        <option value="3">Fast ×2</option>
       </select>
       <button id="helpBtn" aria-label="Show the intro tour">?</button>
     </div>
@@ -475,7 +475,7 @@ const LANES = [7, 10, 13, 16, 19, 22];
 
 const state = {
   running: true,
-  speed: 1,
+  speed: 1.5,
   era: 'pre',            // 'pre' | 'post'
   autoFlipped: false,    // has history's Jan-2020 auto-flip fired yet
   mcb: false,
